@@ -99,10 +99,6 @@ static void send_post_addr_frame(gnb_worker_t *gnb_index_worker){
     memcpy(index_worker_ctx->payload_buffer, (const unsigned char *)&post_addr_frame->data, sizeof(struct post_addr_frame_data));
 
     for ( i=0; i<gnb_core->index_node_ring.num; i++ ) {
-
-printf( "SSSSSSS node=%llu [%s]\n", gnb_core->index_node_ring.nodes[i]->uuid64, GNB_HEX1_BYTE32(gnb_core->index_node_ring.nodes[i]->crypto_key));
-
-
         xor_crypto_copy(gnb_core->index_node_ring.nodes[i]->crypto_key, (unsigned char *)&post_addr_frame->data, index_worker_ctx->payload_buffer, sizeof(struct post_addr_frame_data));
         ed25519_sign(post_addr_frame->src_sign, (const unsigned char *)&post_addr_frame->data, sizeof(struct post_addr_frame_data), gnb_core->ed25519_public_key, gnb_core->ed25519_private_key);
         gnb_send_to_node(gnb_core, gnb_core->index_node_ring.nodes[i], index_worker_ctx->index_frame_payload, GNB_ADDR_TYPE_IPV6|GNB_ADDR_TYPE_IPV4);
