@@ -153,7 +153,7 @@ nodeA --UDP payload--- upd_over_tcp_A --TCP payload--- upd_over_tcp_B --UDP payl
 
 ```
 
-
+[Easy-to-deploy cross-platform OpenGNB management platform](/https://github.com/cnkedao/opengnb-admin)
 
 ## GNB Quick Start
 
