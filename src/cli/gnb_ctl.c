@@ -32,13 +32,13 @@
 #include "gnb_ctl_block.h"
 #include "gnb_version.h"
 
-
 void gnb_ctl_dump_status(gnb_ctl_block_t *ctl_block, gnb_uuid_t in_nodeid, uint8_t online_opt);
-void gnb_ctl_dump_address_list(gnb_ctl_block_t *ctl_block, gnb_uuid_t in_nodeid, uint8_t online_opt);
+void gnb_ctl_dump_address_list(gnb_ctl_block_t *ctl_block, gnb_uuid_t in_nodeid, uint8_t online_opt, int address_type, uint8_t format);
+uint8_t addr_secure = 0;
 
 static void show_useage(int argc,char *argv[]) {
     printf("GNB Ctl\n");
-	printf("%s\n", GNB_VERSION_STRING);
+    printf("%s\n", GNB_VERSION_STRING);
     printf("%s\n", GNB_BUILD_STRING);
 
     printf("Copyright (C) 2019 gnbdev\n");
@@ -47,10 +47,13 @@ static void show_useage(int argc,char *argv[]) {
 
     printf("  -b, --ctl-block           ctl block mapper file\n");
     printf("  -c, --core                operate core zone\n");
-    printf("  -a, --address             dunmp address\n");
     printf("  -s, --status              dunmp node status\n");
     printf("  -o, --online              dunmp online node\n");
+    printf("  -a, --address             dunmp address 0:foramt0,1:foramt1 defalt:0\n");
+    printf("  -4, --ipv4-only           Use IPv4 Only\n");
+    printf("  -6, --ipv6-only           Use IPv6 Only\n");
     printf("  -n, --node                node id\n");
+
     printf("      --help\n");
 
     printf("example:\n");
@@ -62,9 +65,11 @@ int main (int argc,char *argv[]) {
     gnb_ctl_block_t *ctl_block;    
 
     uint8_t  address_opt      = 0;
+    uint8_t  address_type     = 0x3;  // bit0=1:IPV4, bit1=1:IPV6
     uint8_t  core_opt         = 0;
     uint8_t  node_status_opt  = 0;
     uint8_t  online_opt       = 0;
+    uint8_t  address_format   = 0;
     gnb_uuid_t nodeid = 0;
 
     static struct option long_options[] = {
@@ -72,8 +77,10 @@ int main (int argc,char *argv[]) {
       { "node",                 required_argument, 0, 'n' },
       { "core",                 no_argument,       0, 'c' },
       { "status",               no_argument,       0, 's' },
-      { "address",              no_argument,       0, 'a' },
+      { "address",              required_argument, 0, 'a' },
       { "online",               no_argument,       0, 'o' },
+      { "ipv4-only",            no_argument,       0, '4' },
+      { "ipv6-only",            no_argument,       0, '6' },
       { "help",                 no_argument,       0, 'h' },
       { 0, 0, 0, 0 }
     };
@@ -82,7 +89,7 @@ int main (int argc,char *argv[]) {
     int opt;
     while (1) {
         int option_index = 0;
-        opt = getopt_long (argc, argv, "b:n:csaoh",long_options, &option_index);
+        opt = getopt_long (argc, argv, "b:n:csa:o46h",long_options, &option_index);
         if ( opt == -1 ) {
             break;
         }
@@ -101,9 +108,16 @@ int main (int argc,char *argv[]) {
             break;
         case 'a':
             address_opt = 1;
+            address_format = (uint8_t)strtoull(optarg, NULL, 10);
             break;
         case 'o':
             online_opt = 1;
+            break;
+        case '4':
+            address_type = 0x1;
+            break;
+        case '6':
+            address_type = 0x2;
             break;
         case 'h':
             show_useage(argc,argv);
@@ -135,7 +149,10 @@ int main (int argc,char *argv[]) {
         gnb_ctl_dump_status(ctl_block, nodeid, online_opt);
     }
     if ( address_opt ) {
-        gnb_ctl_dump_address_list(ctl_block, nodeid, online_opt);
+        if ( 0 != address_format && 1 != address_format ) {
+            address_format = 0;
+        }
+        gnb_ctl_dump_address_list(ctl_block, nodeid, online_opt, address_type, address_format);
     }
 
 #ifdef _WIN32

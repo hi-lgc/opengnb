@@ -65,6 +65,7 @@ static char * check_domain_name(char *host_string) {
 
 static void gnb_do_resolv_node_address(gnb_node_t *node, char *host_string, uint16_t port, gnb_log_ctx_t *log) {
     int ret;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     struct addrinfo hints;
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
@@ -72,7 +73,7 @@ static void gnb_do_resolv_node_address(gnb_node_t *node, char *host_string, uint
     hints.ai_flags = AI_CANONNAME;
     struct addrinfo *result;
     struct addrinfo *cur;
-	ret = getaddrinfo(host_string, NULL, &hints, &result);
+    ret = getaddrinfo(host_string, NULL, &hints, &result);
     if ( -1 == ret ) {
         return;
     }
@@ -105,7 +106,10 @@ static void gnb_do_resolv_node_address(gnb_node_t *node, char *host_string, uint
         if (0==gnb_address->port) {
             continue;
         }
-        GNB_LOG1(log, GNB_LOG_ID_ES_RESOLV, "resolv [%s]>[%s]\n", host_string, GNB_IP_PORT_STR1(gnb_address));
+        GNB_LOG1(log, GNB_LOG_ID_ES_RESOLV, "resolv [%s]>[%s]\n",
+                 host_string,
+                 gnb_address_port_str(gnb_address,address_string1,0)
+        );
     }
 }
 

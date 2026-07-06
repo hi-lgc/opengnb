@@ -101,6 +101,7 @@ static void handle_uf_node_notify_frame(gnb_core_t *gnb_core, gnb_worker_in_data
     gnb_uuid_t dst_uuid64    = gnb_ntohll(uf_node_notify_frame->data.dst_uuid64);
     gnb_uuid_t df_uuid64     = gnb_ntohll(uf_node_notify_frame->data.df_uuid64);
     gnb_sockaddress_t *node_addr = &node_worker_in_data->node_addr_st;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     if ( src_uuid64 == gnb_core->local_node->uuid64 || dst_uuid64 != gnb_core->local_node->uuid64 || df_uuid64 == gnb_core->local_node->uuid64 ) {
         GNB_LOG2(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_uf_node_notify_frame error local=%llu src=%llu dst=%llu\n", gnb_core->local_node->uuid64, src_uuid64, dst_uuid64);
         return;
@@ -111,7 +112,10 @@ static void handle_uf_node_notify_frame(gnb_core_t *gnb_core, gnb_worker_in_data
         return;
     }
     if ( 0 == gnb_core->conf->lite_mode && !ed25519_verify(uf_node_notify_frame->src_sign, (const unsigned char *)&uf_node_notify_frame->data, sizeof(struct uf_node_notify_frame_data), src_node->public_key) ) {
-        GNB_LOG2(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_uf_node_notify_frame invalid signature src=%llu %s\n", src_uuid64, GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG2(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_uf_node_notify_frame invalid signature src=%llu %s\n",
+                 src_uuid64,
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     gnb_node_t *df_node = GNB_HASH32_UINT64_GET_PTR(gnb_core->uuid_node_map, df_uuid64);
@@ -167,6 +171,8 @@ static void send_ping_frame(gnb_core_t *gnb_core, gnb_node_t *node) {
     int ret;
     gnb_worker_t *primary_worker = gnb_core->primary_worker;
     node_worker_ctx_t *node_worker_ctx = gnb_core->node_worker->ctx;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     if ( INADDR_ANY == node->udp_sockaddr4.sin_addr.s_addr && 0 == memcmp(&node->udp_sockaddr6.sin6_addr,&in6addr_any,sizeof(struct in6_addr)) ) {
         return;
     }
@@ -193,7 +199,8 @@ static void send_ping_frame(gnb_core_t *gnb_core, gnb_node_t *node) {
     node->ping_ts_usec = node_worker_ctx->now_time_usec;
     GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "ping src[%llu]->dst[%llu] %s %s ping_ts=%"PRIu64"\n",
             gnb_core->local_node->uuid64, node->uuid64,
-            GNB_SOCKADDR6STR1(&node->udp_sockaddr6), GNB_SOCKADDR4STR2(&node->udp_sockaddr4),
+            gnb_sockaddr_in6_port_str(&node->udp_sockaddr6,address_string1,gnb_core->conf->addr_secure),
+            gnb_sockaddr_in4_port_str(&node->udp_sockaddr4,address_string2,gnb_core->conf->addr_secure),
             node->ping_ts_usec
     );
 }
@@ -207,6 +214,7 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
     //收到ping frame，需要更新node的addr
     gnb_sockaddress_t *node_addr = &node_worker_in_data->node_addr_st;
     uint8_t addr_update = 0;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     if (src_uuid64 == gnb_core->local_node->uuid64) {
         //目标节点和当前节点在同一个子网里，当前节点发 ping frame 经过路由的nat又转回给了当前节点
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_ping_frame local_node[%llu] src[%llu]=>dst[%llu]\n", gnb_core->local_node->uuid64, src_uuid64, dst_uuid64);
@@ -225,7 +233,10 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
         return;
     }
     if ( 0 == gnb_core->conf->lite_mode && !ed25519_verify(node_ping_frame->src_sign, (const unsigned char *)&node_ping_frame->data, sizeof(struct ping_frame_data), src_node->public_key) ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_ping_frame error invalid signature src=%llu text[%.*s] %s\n", src_uuid64, 32, node_ping_frame->data.text, GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_ping_frame error invalid signature src=%llu text[%.*s] %s\n", src_uuid64, 32,
+                 node_ping_frame->data.text,
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     uint64_t src_ts_usec = gnb_ntohll(node_ping_frame->data.src_ts_usec);
@@ -235,7 +246,7 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
             GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_ping_frame IPV6 Warning src[%llu]->dst[%llu] idx=%u %s\n",
                     src_node->uuid64, dst_uuid64,
                     node_worker_in_data->socket_idx,
-                    GNB_ADDR6STR1(&node_addr->addr.in6.sin6_addr)
+                    gnb_in6_addr_str(&node_addr->addr.in6.sin6_addr,address_string1,gnb_core->conf->addr_secure)
             );
             return;
         }
@@ -250,16 +261,19 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
         GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_ping_frame IPV6 src[%llu]->dst[%llu] idx=%u %s now=%"PRIu64" src_ts=%"PRIu64" up=%u different=%"PRId64"\n",
                 src_node->uuid64, dst_uuid64,
                 node_worker_in_data->socket_idx,
-                GNB_SOCKADDR6STR1(&src_node->udp_sockaddr6),
-                node_worker_ctx->now_time_usec, src_ts_usec, addr_update, latency_usec);
+                gnb_sockaddr_in6_port_str(&src_node->udp_sockaddr6,address_string1,gnb_core->conf->addr_secure),
+                node_worker_ctx->now_time_usec, src_ts_usec, addr_update, latency_usec
+        );
     }
+    char address_string_buffer1[GNB_IP6_PORT_STRING_SIZE];
+    //char address_string_buffer2[GNB_IP6_PORT_STRING_SIZE];
 
     if ( AF_INET == node_addr->addr_type ) {
         if ( 0 != gnb_determine_subnet4(node_addr->addr.in.sin_addr,  gnb_core->local_node->tun_addr4, gnb_core->local_node->tun_netmask_addr4) ) {
             GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_ping_frame IPV4 Warning src[%llu]->dst[%llu] idx=%u %s\n",
                     src_node->uuid64, dst_uuid64,
                     node_worker_in_data->socket_idx,
-                    GNB_ADDR4STR1(&node_addr->addr.in.sin_addr)
+                    gnb_in4_addr_str(&node_addr->addr.in.sin_addr,address_string_buffer1,gnb_core->conf->addr_secure)
             );
             return;
         }
@@ -279,7 +293,7 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
             GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_ping_frame IPV4 LAN src[%llu]->dst[%llu] idx=%u %s now=%"PRIu64" src_ts=%"PRIu64" up=%u different=%"PRId64"\n",
                     src_node->uuid64, dst_uuid64,
                     node_worker_in_data->socket_idx,
-                    GNB_SOCKADDR4STR1(&src_node->udp_sockaddr4),
+                    gnb_sockaddr_in4_port_str(&src_node->udp_sockaddr4,address_string1,gnb_core->conf->addr_secure),
                     node_worker_ctx->now_time_usec, src_ts_usec, addr_update, latency_usec);
         }
         src_node->udp_addr_status |= GNB_NODE_STATUS_IPV4_PING;
@@ -287,8 +301,9 @@ static void handle_ping_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
         GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_ping_frame IPV4 src[%llu]->dst[%llu] idx=%u %s now=%"PRIu64" src_ts=%"PRIu64" up=%u different=%"PRId64"\n",
                 src_node->uuid64, dst_uuid64,
                 node_worker_in_data->socket_idx,
-                GNB_SOCKADDR4STR1(&src_node->udp_sockaddr4),
-                node_worker_ctx->now_time_usec, src_ts_usec, addr_update, latency_usec);
+                gnb_sockaddr_in4_port_str(&src_node->udp_sockaddr4,address_string1,gnb_core->conf->addr_secure),
+                node_worker_ctx->now_time_usec, src_ts_usec, addr_update, latency_usec
+        );
     }
     node_worker_ctx->node_frame_payload->sub_type = PAYLOAD_SUB_TYPE_PONG;
     gnb_payload16_set_data_len(node_worker_ctx->node_frame_payload, sizeof(node_pong_frame_t));
@@ -331,6 +346,7 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
     gnb_address_t address_st;
     gnb_address_list_t *address_list3;
     uint8_t addr_update = 0;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     if ( dst_uuid64 != gnb_core->local_node->uuid64 ) {
         GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_pong_frame dst_uuid64[%llu] != local_node[%llu] addr_type=%d\n", dst_uuid64, gnb_core->local_node->uuid64, node_worker_in_data->node_addr_st.addr_type);
         return;
@@ -348,7 +364,10 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
         return;
     }
     if ( 0 == gnb_core->conf->lite_mode && !ed25519_verify(node_pong_frame->src_sign, (const unsigned char *)&node_pong_frame->data, sizeof(struct pong_frame_data), src_node->public_key) ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame error node=%llu invalid signature text[%.*s] %s\n", src_uuid64, 32, node_pong_frame->data.text, GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame error node=%llu invalid signature text[%.*s] %s\n", src_uuid64, 32,
+                 node_pong_frame->data.text,
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     if ( node_worker_ctx->now_time_usec > dst_ts_usec ) {
@@ -361,12 +380,12 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
             GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame IPV6 Warning src[%llu]->dst[%llu] idx=%u %s\n",
                     src_node->uuid64, dst_uuid64,
                     node_worker_in_data->socket_idx,
-                    GNB_ADDR6STR1(&node_addr->addr.in6.sin6_addr)
+                    gnb_in6_addr_str(&node_addr->addr.in6.sin6_addr, address_string1, gnb_core->conf->addr_secure)
             );
             return;
         }
         src_node->udp_addr_status |= GNB_NODE_STATUS_IPV6_PONG;
-        gnb_set_address6(&address_st, &node_addr->addr.in6);
+        gnb_address6_set(&address_st, &node_addr->addr.in6);
         address_st.ts_sec = node_worker_ctx->now_time_sec;
         address_list3 = (gnb_address_list_t *)src_node->available_address6_list3_block;
         gnb_address_list3_fifo(address_list3, &address_st);
@@ -386,8 +405,9 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame IPV6 src[%llu]->dst[%llu] idx=%u %s now=%"PRIu64" dst_ts=%"PRIu64" up=%u latency=%"PRId64"\n",
                 src_node->uuid64, dst_uuid64,
                 node_worker_in_data->socket_idx,
-                GNB_SOCKADDR6STR1(&src_node->udp_sockaddr6),
-                node_worker_ctx->now_time_usec, dst_ts_usec, addr_update, src_node->addr6_ping_latency_usec);
+                gnb_sockaddr_in6_port_str(&src_node->udp_sockaddr6,address_string1,gnb_core->conf->addr_secure),
+                node_worker_ctx->now_time_usec,dst_ts_usec, addr_update,src_node->addr6_ping_latency_usec
+        );
     }
 
     if ( AF_INET == node_addr->addr_type ) {
@@ -395,12 +415,12 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
             GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame IPV4 Warning src[%llu]->dst[%llu] idx=%u %s\n",
                     src_node->uuid64, dst_uuid64,
                     node_worker_in_data->socket_idx,
-                    GNB_ADDR4STR1(&node_addr->addr.in.sin_addr)
+                    gnb_in4_addr_str(&node_addr->addr.in.sin_addr,address_string1,gnb_core->conf->addr_secure)
             );
             return;
         }
         src_node->udp_addr_status |= GNB_NODE_STATUS_IPV4_PONG;
-        gnb_set_address4(&address_st, &node_addr->addr.in);
+        gnb_address4_set(&address_st, &node_addr->addr.in);
         address_st.ts_sec = node_worker_ctx->now_time_sec;
         address_list3 = (gnb_address_list_t *)src_node->available_address4_list3_block;
         gnb_address_list3_fifo(address_list3, &address_st);
@@ -417,12 +437,12 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
                 GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "addr4_ping_latency_usec=0 now=%"PRIu64" dst_ts=%"PRIu64"\n", node_worker_ctx->now_time_usec, dst_ts_usec);
             }
         }
-
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_NODE_WORKER, "handle_pong_frame IPV4 src[%llu]->dst[%llu] idx=%u %s now=%"PRIu64" dst_ts=%"PRIu64" up=%u latency=%"PRId64"\n",
                 src_node->uuid64, dst_uuid64,
                 node_worker_in_data->socket_idx,
-                GNB_SOCKADDR4STR1(&src_node->udp_sockaddr4),
-                node_worker_ctx->now_time_usec, dst_ts_usec, addr_update, src_node->addr4_ping_latency_usec);
+                gnb_sockaddr_in4_port_str(&src_node->udp_sockaddr4,address_string1,gnb_core->conf->addr_secure),
+                node_worker_ctx->now_time_usec, dst_ts_usec, addr_update, src_node->addr4_ping_latency_usec
+        );
     }
 
     //处理附件
@@ -437,7 +457,8 @@ static void handle_pong_frame(gnb_core_t *gnb_core, gnb_worker_in_data_t *node_w
     if ( PAYLOAD_SUB_TYPE_PONG2 == node_worker_in_data->payload_st.sub_type ) {
         GNB_LOG3(gnb_core->log,GNB_LOG_ID_NODE_WORKER, "handle_pong2_frame  src[%llu]->dst[%llu] idx=%u\n",
                 src_node->uuid64, dst_uuid64,
-                node_worker_in_data->socket_idx);
+                node_worker_in_data->socket_idx
+        );
         return;
     }
     node_worker_ctx->node_frame_payload->sub_type = PAYLOAD_SUB_TYPE_PONG2;

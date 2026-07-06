@@ -176,13 +176,13 @@ static int set_addr4(char *if_name, char *ip, char *netmask) {
 static int set_addr6(char *if_name, char *ip, char *netmask) {
     //不要设置 in6_addreq.ifra_dstaddr 成员,  ioctl 会提示参数不正确
     struct in6_aliasreq in6_addreq =
-	{   { 0 },
-		{ 0 },
-		{ 0 },
-		{ 0 },
-		0,
-		{ 0, 0, ND6_INFINITE_LIFETIME, ND6_INFINITE_LIFETIME }
-	};
+    {   { 0 },
+        { 0 },
+        { 0 },
+        { 0 },
+        0,
+        { 0, 0, ND6_INFINITE_LIFETIME, ND6_INFINITE_LIFETIME }
+    };
 
     struct addrinfo *srcres, *netmaskres;
     struct addrinfo hints;
@@ -214,6 +214,9 @@ int init_tun_openbsd(gnb_core_t *gnb_core) {
 }
 
 static int open_tun_openbsd(gnb_core_t *gnb_core) {
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
+
     if ( -1 != gnb_core->tun_fd ) {
         return -1;
     }
@@ -229,8 +232,15 @@ static int open_tun_openbsd(gnb_core_t *gnb_core) {
     flags = fcntl(gnb_core->tun_fd, F_GETFD);
     flags |= FD_CLOEXEC;
     fcntl(gnb_core->tun_fd, F_SETFD, flags);
-    set_addr4(gnb_core->ifname, GNB_ADDR4STR1(&gnb_core->local_node->tun_addr4),  GNB_ADDR4STR2(&gnb_core->local_node->tun_netmask_addr4));
-    set_addr6(gnb_core->ifname, GNB_ADDR6STR1(&gnb_core->local_node->tun_ipv6_addr), "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000");
+    set_addr6(gnb_core->ifname,
+              gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr,address_string1,gnb_core->conf->addr_secure),
+              "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000"
+    );
+    set_addr4(gnb_core->ifname,
+              gnb_in4_addr_str(&gnb_core->local_node->tun_addr4,address_string1,gnb_core->conf->addr_secure),
+              gnb_in4_addr_str(&gnb_core->local_node->tun_netmask_addr4,address_string2,gnb_core->conf->addr_secure)
+    );
+    
     set_route4(gnb_core);
     setifmtu(gnb_core->ifname, gnb_core->conf->mtu);
     if_up_script(gnb_core);

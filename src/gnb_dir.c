@@ -67,7 +67,7 @@ char *gnb_get_file_dir_dup(char *file_name) {
     char *string = strdup(file_name);
     char *resolved_path = (char *)malloc(PATH_MAX);    
     int i;
-	size_t string_len = strlen( (const char *)string );
+    size_t string_len = strlen( (const char *)string );
 
     for ( i=(int)string_len-1; i>0; i-- ) {
         if ( '/'==string[i] || '\\'==string[i] ) {
@@ -104,7 +104,7 @@ char *gnb_realpath(char *in_path, char *resolved_path) {
     struct stat st;
     char *file_basename = NULL;
     char file_dir[PATH_MAX+NAME_MAX];
-	int i;
+    int i;
     ret = stat(in_path,&st);
 
     if ( 0 == ret && S_ISDIR(st.st_mode) ) {
@@ -198,8 +198,8 @@ char *gnb_make_realpath_dup(char *base_path, char *sub_path) {
 int gnb_get_dir_file_names(char *path, gnb_file_info_t **sub_file_info_lst, uint32_t *lst_len_ptr) {
     struct stat s;
     DIR *dir;
-	size_t filename_len;
-	size_t abs_filename_len;
+    size_t filename_len;
+    size_t abs_filename_len;
     char abs_filename[GNB_MAX_FILE_NAME_LEN];
     struct dirent *sub_dirent;
     uint8_t file_type;
@@ -293,9 +293,9 @@ int gnb_get_dir_file_names(char *path, gnb_file_info_t **sub_file_info_lst, uint
 int gnb_scan_dir(char *path, gnb_file_info_t **file_info_lst, uint32_t *lst_len_ptr) {
     gnb_file_info_t **sub_file_info_lst = file_info_lst;
     int max_lst_len = *lst_len_ptr;
-	uint32_t sub_lst_len = max_lst_len;
+    uint32_t sub_lst_len = max_lst_len;
     int lst_len = 0;
-	int i;
+    int i;
     gnb_get_dir_file_names(path, sub_file_info_lst, &sub_lst_len);
     lst_len += sub_lst_len;
     sub_file_info_lst += sub_lst_len;
@@ -347,172 +347,172 @@ char *gnb_file_path_dup(const char *filename, size_t len) {
 }
 
 int gnb_mkdirs(char *path,mode_t mode) {
-	char *dir_token_array[GNB_MAX_DIR_TOKEN_ARRAY_SIZE];
-	char path_buffer[PATH_MAX];
-	char token[PATH_MAX];
-	char *p;	
-	int i = 0;
-	int dir_idx = 0;
-	uint16_t buffer_off_set = 0;
-	uint16_t buffer_len = PATH_MAX;
-	struct stat s;	
-	int r;
-	memset(dir_token_array, 0, GNB_MAX_DIR_TOKEN_ARRAY_SIZE);
-	strncpy(path_buffer, path, PATH_MAX);
-	p = path_buffer;
+    char *dir_token_array[GNB_MAX_DIR_TOKEN_ARRAY_SIZE];
+    char path_buffer[PATH_MAX];
+    char token[PATH_MAX];
+    char *p;    
+    int i = 0;
+    int dir_idx = 0;
+    uint16_t buffer_off_set = 0;
+    uint16_t buffer_len = PATH_MAX;
+    struct stat s;    
+    int r;
+    memset(dir_token_array, 0, GNB_MAX_DIR_TOKEN_ARRAY_SIZE);
+    strncpy(path_buffer, path, PATH_MAX);
+    p = path_buffer;
 
-	while (*p) {
-		if ( '/' == *p || '\\' == *p ) {
-			if ( 0 != i ) {
-				//找到子目录尾部
-				token[i] = '\0';
-				i = 0;
-				dir_token_array[dir_idx] = strdup(token);
-				dir_idx++;
-			}
-		} else {
-			token[i] = *p;
-			i++;
-		}
-		p++;
-	}
-	if ( 0 != i  ) {
-		token[i] = '\0';
-		dir_token_array[dir_idx] = strdup(token);
-		dir_idx++;
-	}
-	//检查合法性
-	for (i=0;i<dir_idx;i++) {
-		if ( !memcmp(dir_token_array[i], "..", 3) ) {
-			return -1;
-		}
-	}
-	for (i=0;i<dir_idx;i++) {
-		buffer_off_set += snprintf(path_buffer+buffer_off_set, buffer_len, "/%s", dir_token_array[i]);
-		r = stat(path_buffer,&s);
-		if ( 0==r ) {
-			//存在文件或目录
-			if ( S_ISDIR(s.st_mode) ) {
-				//目录存在,跳过
-				continue;
-			} else {
-				//存在文件,不是目录,出错退出
-			}
-		}
-		//目录不存在,建目录
-		#if __UNIX_LIKE_OS__
-		r = mkdir(path_buffer, mode);
-		#endif
+    while (*p) {
+        if ( '/' == *p || '\\' == *p ) {
+            if ( 0 != i ) {
+                //找到子目录尾部
+                token[i] = '\0';
+                i = 0;
+                dir_token_array[dir_idx] = strdup(token);
+                dir_idx++;
+            }
+        } else {
+            token[i] = *p;
+            i++;
+        }
+        p++;
+    }
+    if ( 0 != i  ) {
+        token[i] = '\0';
+        dir_token_array[dir_idx] = strdup(token);
+        dir_idx++;
+    }
+    //检查合法性
+    for (i=0;i<dir_idx;i++) {
+        if ( !memcmp(dir_token_array[i], "..", 3) ) {
+            return -1;
+        }
+    }
+    for (i=0;i<dir_idx;i++) {
+        buffer_off_set += snprintf(path_buffer+buffer_off_set, buffer_len, "/%s", dir_token_array[i]);
+        r = stat(path_buffer,&s);
+        if ( 0==r ) {
+            //存在文件或目录
+            if ( S_ISDIR(s.st_mode) ) {
+                //目录存在,跳过
+                continue;
+            } else {
+                //存在文件,不是目录,出错退出
+            }
+        }
+        //目录不存在,建目录
+        #if __UNIX_LIKE_OS__
+        r = mkdir(path_buffer, mode);
+        #endif
 
-		#ifdef _WIN32
-		r = mkdir(path_buffer);
-		#endif
-	}
+        #ifdef _WIN32
+        r = mkdir(path_buffer);
+        #endif
+    }
 
-	for (i=0;i<dir_idx;i++) {
-		free(dir_token_array[i]);
-	}
-	return 0;
+    for (i=0;i<dir_idx;i++) {
+        free(dir_token_array[i]);
+    }
+    return 0;
 }
 
 int gnb_remove_dirs(char *path) {
-	#define GNB_MAX_DIR_FILE_ARRAY_SIZE 1024*1024
-	uint32_t sub_dir_lst_len = GNB_MAX_DIR_FILE_ARRAY_SIZE;
-	gnb_file_info_t **sub_dir_file_info_lst;
-	uint32_t r;
-	uint32_t i;
-	sub_dir_file_info_lst = malloc(sizeof(gnb_file_info_t *) * sub_dir_lst_len);
-	r = gnb_scan_dir(path, sub_dir_file_info_lst, &sub_dir_lst_len);
-	if (0 != r ) {
-		return -1;
-	}
-	i=sub_dir_lst_len-1;
-	do {
-		if ( GNB_FILE_TYPE_DIR != sub_dir_file_info_lst[i]->type ) {
-			r = remove(sub_dir_file_info_lst[i]->abs_name);
-			if (r) {
-				return -1;
-			}
-		}
-	} while(i--);
+    #define GNB_MAX_DIR_FILE_ARRAY_SIZE 1024*1024
+    uint32_t sub_dir_lst_len = GNB_MAX_DIR_FILE_ARRAY_SIZE;
+    gnb_file_info_t **sub_dir_file_info_lst;
+    uint32_t r;
+    uint32_t i;
+    sub_dir_file_info_lst = malloc(sizeof(gnb_file_info_t *) * sub_dir_lst_len);
+    r = gnb_scan_dir(path, sub_dir_file_info_lst, &sub_dir_lst_len);
+    if (0 != r ) {
+        return -1;
+    }
+    i=sub_dir_lst_len-1;
+    do {
+        if ( GNB_FILE_TYPE_DIR != sub_dir_file_info_lst[i]->type ) {
+            r = remove(sub_dir_file_info_lst[i]->abs_name);
+            if (r) {
+                return -1;
+            }
+        }
+    } while(i--);
 
-	r = gnb_scan_dir(path, sub_dir_file_info_lst, &sub_dir_lst_len);
+    r = gnb_scan_dir(path, sub_dir_file_info_lst, &sub_dir_lst_len);
 
-	if (0 != r ) {
-		return -1;
-	}
+    if (0 != r ) {
+        return -1;
+    }
 
-	i=sub_dir_lst_len-1;
-	do {
-		if ( GNB_FILE_TYPE_DIR == sub_dir_file_info_lst[i]->type ) {
-			r = remove(sub_dir_file_info_lst[i]->abs_name);
-			if (r) {
-				return -1;
-			}
-		}
-	} while(i--);
-	r = remove(path);
-	if (r) {
-		return -1;
-	}
-	return 0;
+    i=sub_dir_lst_len-1;
+    do {
+        if ( GNB_FILE_TYPE_DIR == sub_dir_file_info_lst[i]->type ) {
+            r = remove(sub_dir_file_info_lst[i]->abs_name);
+            if (r) {
+                return -1;
+            }
+        }
+    } while(i--);
+    r = remove(path);
+    if (r) {
+        return -1;
+    }
+    return 0;
 }
 
 int gnb_inspect_in_directory(char *dst, char *src) {
-	char *dir_token_array[GNB_MAX_DIR_TOKEN_ARRAY_SIZE];
-	char path_buffer[PATH_MAX];
-	char token[PATH_MAX];
-	char *p;	
-	int i = 0;
-	int dir_idx = 0;
-	char dst_realpath[PATH_MAX];
-	struct stat s;
-	int r;
-	if ( NULL == gnb_realpath(dst, dst_realpath) ) {
-		return -1;
-	}
-	//检查 dst_realpath 是否为目录
-	r = stat(dst_realpath,&s);	
-	if ( 0 != r ) {
-		return -1;
-	}
-	if ( !S_ISDIR(s.st_mode) ) {
-		return -1;
-	}
-	memset(dir_token_array, 0, GNB_MAX_DIR_TOKEN_ARRAY_SIZE);
-	strncpy(path_buffer, src, PATH_MAX);
-	p = path_buffer;
+    char *dir_token_array[GNB_MAX_DIR_TOKEN_ARRAY_SIZE];
+    char path_buffer[PATH_MAX];
+    char token[PATH_MAX];
+    char *p;    
+    int i = 0;
+    int dir_idx = 0;
+    char dst_realpath[PATH_MAX];
+    struct stat s;
+    int r;
+    if ( NULL == gnb_realpath(dst, dst_realpath) ) {
+        return -1;
+    }
+    //检查 dst_realpath 是否为目录
+    r = stat(dst_realpath,&s);    
+    if ( 0 != r ) {
+        return -1;
+    }
+    if ( !S_ISDIR(s.st_mode) ) {
+        return -1;
+    }
+    memset(dir_token_array, 0, GNB_MAX_DIR_TOKEN_ARRAY_SIZE);
+    strncpy(path_buffer, src, PATH_MAX);
+    p = path_buffer;
 
-	while (*p) {
-		if ( '/' == *p || '\\' == *p ) {
-			if ( 0 != i ) {
-				//找到子目录尾部
-				token[i] = '\0';
-				i = 0;
-				dir_token_array[dir_idx] = strdup(token);
-				dir_idx++;
-			}
-		} else {
-			token[i] = *p;
-			i++;
-		}
-		p++;
-	}
+    while (*p) {
+        if ( '/' == *p || '\\' == *p ) {
+            if ( 0 != i ) {
+                //找到子目录尾部
+                token[i] = '\0';
+                i = 0;
+                dir_token_array[dir_idx] = strdup(token);
+                dir_idx++;
+            }
+        } else {
+            token[i] = *p;
+            i++;
+        }
+        p++;
+    }
 
-	if ( 0 != i  ) {
-		token[i] = '\0';
-		dir_token_array[dir_idx] = strdup(token);
-		dir_idx++;
-	}
-	//检查合法性
-	for ( i=0; i<dir_idx; i++ ) {
-		if ( !memcmp(dir_token_array[i], "..", 3) ) {
-			return -1;
-		}
-	}
-	size_t src_len = strlen(dst_realpath);
-	r = memcmp(dst_realpath, src, src_len);
-	return r;
+    if ( 0 != i  ) {
+        token[i] = '\0';
+        dir_token_array[dir_idx] = strdup(token);
+        dir_idx++;
+    }
+    //检查合法性
+    for ( i=0; i<dir_idx; i++ ) {
+        if ( !memcmp(dir_token_array[i], "..", 3) ) {
+            return -1;
+        }
+    }
+    size_t src_len = strlen(dst_realpath);
+    r = memcmp(dst_realpath, src, src_len);
+    return r;
 }
 
 void gnb_release_file_info_lst(gnb_file_info_t **file_info_lst, int lst_len) {

@@ -52,7 +52,7 @@ static void init_arc4_keys(gnb_core_t *gnb_core,gnb_pf_t *pf) {
 
 static void pf_init_cb(gnb_core_t *gnb_core, gnb_pf_t *pf) {
     gnb_pf_private_ctx_t *ctx = (gnb_pf_private_ctx_t*)gnb_heap_alloc(gnb_core->heap,sizeof(gnb_pf_private_ctx_t));
-    ctx->arc4_ctx_map = gnb_hash32_create(gnb_core->heap,gnb_core->node_nums,gnb_core->node_nums);
+    ctx->arc4_ctx_map = gnb_hash32_create(gnb_core->heap,gnb_core->node_nums);
     pf->private_ctx = ctx;
     int num = gnb_core->ctl_block->node_zone->node_num;
     if ( 0 == num ) {

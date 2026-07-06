@@ -45,6 +45,8 @@
 #include "gnb_time.h"
 #include "gnb_es_type.h"
 
+
+#ifdef WITH_MINIUPNPC
 #include "miniupnpc.h"
 #include "natpmp.h"
 #include "upnpcommands.h"
@@ -64,8 +66,8 @@ static void gnb_es_upnp_em(gnb_es_ctx *es_ctx, gnb_conf_t *conf, gnb_log_ctx_t *
     struct IGDdatas data;
     char lan_addr[64] = "unset";
     char lan_addr_port[6];
-	char wan_addr[64] = "unset";
-	char wan_addr_port[6];
+    char wan_addr[64] = "unset";
+    char wan_addr_port[6];
 
     //查询时用
     char intClient[16];
@@ -204,9 +206,9 @@ int gnb_es_natpnpc(gnb_es_ctx *es_ctx, gnb_conf_t *conf, gnb_log_ctx_t *log) {
         GNB_LOG1(log, GNB_LOG_ID_ES_UPNP, "readnatpmpresponseorretry returned %d (%s)\n", r, r==0?"OK":(r==NATPMP_TRYAGAIN?"TRY AGAIN":"FAILED"));
         if( r<0 && r!=NATPMP_TRYAGAIN ) {
 
-		#ifdef ENABLE_STRNATPMPERR
+        #ifdef ENABLE_STRNATPMPERR
             GNB_LOG1(log, GNB_LOG_ID_ES_UPNP, "readnatpmpresponseorretry() failed : %s\n", strnatpmperr(r));
-		#endif
+        #endif
             GNB_LOG1(log, GNB_LOG_ID_ES_UPNP, "errno=%d '%s'\n", sav_errno, strerror(sav_errno));
         }
     } while (r==NATPMP_TRYAGAIN);
@@ -244,3 +246,4 @@ void gnb_es_upnp(gnb_es_ctx *es_ctx, gnb_conf_t *conf, gnb_log_ctx_t *log) {
     GNB_LOG1(log, GNB_LOG_ID_ES_UPNP, "gnb_es_natpnpc ret=%d next gnb_es_upnp_em\n", ret);
     gnb_es_upnp_em(es_ctx, conf, log);
 }
+#endif

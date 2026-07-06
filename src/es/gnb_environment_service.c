@@ -100,7 +100,7 @@ gnb_map_init_success:
     es_ctx->heap = heap;
     es_ctx->ctl_block = ctl_block;
     //对 node 进行索引
-    es_ctx->uuid_node_map = gnb_hash32_create(es_ctx->heap,1024,1024);
+    es_ctx->uuid_node_map = gnb_hash32_create(es_ctx->heap,1024);
     node_num = es_ctx->ctl_block->node_zone->node_num;
     if ( 0 == node_num ) {
         goto finish;
@@ -137,11 +137,12 @@ void gnb_es_ctx_init(gnb_es_ctx *es_ctx) {
 
 static void gnb_es_setup_env(gnb_es_ctx *es_ctx) {
     char env_value_string[64];
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     gnb_set_env("GNB_IF_NAME", (const char *)es_ctx->ctl_block->core_zone->ifname);
     snprintf(env_value_string, 64, "%d", es_ctx->ctl_block->conf_zone->conf_st.mtu);
     gnb_set_env("GNB_MTU", env_value_string);
-    gnb_set_env("GNB_TUN_IPV4", GNB_ADDR4STR1(&es_ctx->local_node->tun_addr4));
-    gnb_set_env("GNB_TUN_IPV6", GNB_ADDR6STR1(&es_ctx->local_node->tun_ipv6_addr));
+    gnb_set_env("GNB_TUN_IPV6", gnb_in6_addr_str(&es_ctx->local_node->tun_ipv6_addr,address_string1,0));
+    gnb_set_env("GNB_TUN_IPV4", gnb_in4_addr_str(&es_ctx->local_node->tun_addr4,address_string1,0));
 }
 
 #define GNB_RESOLV_INTERVAL_SEC              900
@@ -178,10 +179,12 @@ void gnb_start_environment_service(gnb_es_ctx *es_ctx) {
         if ( es_ctx->if_loop_opt ) {
             gnb_es_if_loop(es_ctx);
         }
+        #if defined(WITH_MINIUPNPC)
         if ( es_ctx->upnp_opt && (es_ctx->now_time_sec - last_upnp_time_sec ) > GNB_UPNP_INTERVAL_SEC ) {
             gnb_es_upnp(es_ctx, &es_ctx->ctl_block->conf_zone->conf_st,  es_ctx->log);
             last_upnp_time_sec = es_ctx->now_time_sec;
         }
+        #endif
         if ( es_ctx->dump_address_opt && (es_ctx->now_time_sec - last_dump_address_sec ) > GNB_DUMP_ADDRESS_INTERVAL_SEC ) {
             gnb_es_dump_address_list(es_ctx);
             last_dump_address_sec = es_ctx->now_time_sec;

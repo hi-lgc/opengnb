@@ -26,20 +26,20 @@ typedef struct _gnb_hash32_bucket_t{
 
 uint32_t murmurhash_hash(unsigned char *data, size_t len);
 
-gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num, uint32_t kv_num) {
+gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num) {
     gnb_hash32_map_t *hash32_map = gnb_heap_alloc(heap, sizeof(gnb_hash32_map_t));
     if ( NULL == hash32_map ) {
         return NULL;
     }
     memset(hash32_map, 0, sizeof(gnb_hash32_map_t));
     hash32_map->heap = heap;
-    hash32_map->buckets = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t *) * bucket_num );
+    hash32_map->buckets = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t *) * bucket_num);
     if ( NULL == hash32_map->buckets ) {
         return NULL;
     }
     hash32_map->bucket_num = bucket_num;
     uint32_t i;
-    void *p = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t)*bucket_num );
+    void *p = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_hash32_bucket_t)*bucket_num);
     if ( NULL == p ) {
         return NULL;
     }
@@ -68,7 +68,7 @@ gnb_kv32_t *gnb_kv32_create(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t 
     } else {
         r_value_len = sizeof(void *);
     }
-    gnb_kv32_t *kv = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_kv32_t) + sizeof(gnb_block32_t) + r_key_len + sizeof(gnb_block32_t) + r_value_len );
+    gnb_kv32_t *kv = gnb_heap_alloc(hash32_map->heap, sizeof(gnb_kv32_t) + sizeof(gnb_block32_t) + r_key_len + sizeof(gnb_block32_t) + r_value_len);
     if ( NULL == kv ) {
         return NULL;
     }

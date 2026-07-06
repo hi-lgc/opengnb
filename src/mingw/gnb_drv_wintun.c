@@ -95,18 +95,15 @@ InitializeWintun(gnb_core_t *gnb_core){
     return Wintun;
 }
 
-typedef struct _gnb_core_wintun_ctx_t{
+typedef struct _gnb_core_wintun_ctx_t {
     char if_name[PATH_MAX];
     HMODULE drv_module;
     WINTUN_ADAPTER_HANDLE adapter_handle;
     WINTUN_SESSION_HANDLE session;
-
     HANDLE hQuitEvent;
     HANDLE hReadEvent;
-
     int skip_if_script;
-
-}gnb_core_wintun_ctx_t;
+} gnb_core_wintun_ctx_t;
 
 static int close_tun_wintun(gnb_core_t *gnb_core);
 static int open_tun_wintun(gnb_core_t *gnb_core);
@@ -114,13 +111,10 @@ static int release_tun_wintun(gnb_core_t *gnb_core);
 
 #define MAX_KEY_LENGTH 255
 
-int init_tun_wintun(gnb_core_t *gnb_core){
-
-    gnb_core_wintun_ctx_t *tun_wintun_ctx = (gnb_core_wintun_ctx_t *)malloc(sizeof(gnb_core_wintun_ctx_t));
+int init_tun_wintun(gnb_core_t *gnb_core) {
+    gnb_core_wintun_ctx_t *tun_wintun_ctx = (gnb_core_wintun_ctx_t *)gnb_heap_alloc(gnb_core->heap, sizeof(gnb_core_wintun_ctx_t));
     memset(tun_wintun_ctx, 0, sizeof(gnb_core_wintun_ctx_t));
-
     tun_wintun_ctx->skip_if_script = 0;
-
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Note:gnb_drv_wintun.c is a Third party module; technical support: https://www.github.com/wuqiong\n");
 
     HMODULE module = InitializeWintun(gnb_core);
@@ -132,7 +126,6 @@ int init_tun_wintun(gnb_core_t *gnb_core){
     }
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "InitializeWintun  success...\n");
 
-
     HANDLE quit_event = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (!quit_event)
     {
@@ -140,192 +133,138 @@ int init_tun_wintun(gnb_core_t *gnb_core){
         WintunDeleteDriver();
         return -2;
     }
-
     tun_wintun_ctx->hQuitEvent = quit_event;
-
-
     tun_wintun_ctx->drv_module = module;
-
     gnb_core->platform_ctx = tun_wintun_ctx;
-
     snprintf(tun_wintun_ctx->if_name, PATH_MAX, "%s", "P2PNet");
-
     if ( tun_wintun_ctx->if_name && 0 != strncmp(gnb_core->ifname,tun_wintun_ctx->if_name,256) ) {
         snprintf(gnb_core->ifname, 256, "%s", tun_wintun_ctx->if_name);
     }
-
     if(gnb_core->if_device_string!=NULL)
     {
         snprintf(gnb_core->if_device_string, 256, "%s", "P2PNet Device");
     }
-
     return 0;
-
 }
-
 
 //Add
 static ULONG get_if_id(gnb_core_t *gnb_core) {
-
-	return 0l;
+    return 0l;
 }
 
-
-
-static void if_up(gnb_core_t *gnb_core){
-
+static void if_up(gnb_core_t *gnb_core) {
     char bin_path[PATH_MAX+NAME_MAX];
     char bin_path_q[PATH_MAX+NAME_MAX];
     char map_path_q[PATH_MAX+NAME_MAX];
-
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
     strncpy(gnb_core->ctl_block->conf_zone->conf_st.ifname, tun_wintun_ctx->if_name, NAME_MAX);
-
     snprintf(bin_path,   PATH_MAX+NAME_MAX, "%s\\gnb_es.exe",     gnb_core->ctl_block->conf_zone->conf_st.binary_dir);
     snprintf(bin_path_q, PATH_MAX+NAME_MAX, "\"%s\\gnb_es.exe\"", gnb_core->ctl_block->conf_zone->conf_st.binary_dir);
     snprintf(map_path_q, PATH_MAX+NAME_MAX, "\"%s\"",             gnb_core->ctl_block->conf_zone->conf_st.map_file);
-
     gnb_arg_list_t *arg_list;
     arg_list = gnb_arg_list_init(32);
-
     gnb_arg_append(arg_list, bin_path_q);
-
     gnb_arg_append(arg_list, "-b");
     gnb_arg_append(arg_list, map_path_q);
-
     gnb_arg_append(arg_list, "--if-up");
-
     gnb_exec(bin_path, gnb_core->ctl_block->conf_zone->conf_st.binary_dir, arg_list, GNB_EXEC_BACKGROUND|GNB_EXEC_WAIT);
-
     gnb_arg_list_release(arg_list);
-
 }
 
-static void if_down(gnb_core_t *gnb_core){
-
+static void if_down(gnb_core_t *gnb_core) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
     char bin_path[PATH_MAX+NAME_MAX];
     char bin_path_q[PATH_MAX+NAME_MAX];
     char map_path_q[PATH_MAX+NAME_MAX];
-
     snprintf(bin_path,   PATH_MAX+NAME_MAX, "%s\\gnb_es.exe",     gnb_core->ctl_block->conf_zone->conf_st.binary_dir);
     snprintf(bin_path_q, PATH_MAX+NAME_MAX, "\"%s\\gnb_es.exe\"", gnb_core->ctl_block->conf_zone->conf_st.binary_dir);
     snprintf(map_path_q, PATH_MAX+NAME_MAX, "\"%s\"",             gnb_core->ctl_block->conf_zone->conf_st.map_file);
-
     gnb_arg_list_t *arg_list;
     arg_list = gnb_arg_list_init(32);
-
     gnb_arg_append(arg_list, bin_path_q);
-
     gnb_arg_append(arg_list, "-b");
     gnb_arg_append(arg_list, map_path_q);
-
     gnb_arg_append(arg_list, "--if-down");
-
     gnb_exec(bin_path, gnb_core->ctl_block->conf_zone->conf_st.binary_dir, arg_list, GNB_EXEC_BACKGROUND|GNB_EXEC_WAIT);
-
     gnb_arg_list_release(arg_list);
-
 }
 
-static int ntod(uint32_t mask){
+static int ntod(uint32_t mask) {
     int i, n = 0;
     int bits = sizeof(uint32_t) * 8;
-
     for (i = bits - 1; i >= 0; i--) {
         if (mask & (0x01 << i))
             n++;
     }
-
     return n;
 }
 
-static int set_addr4(gnb_core_t *gnb_core){
-
+static int set_addr4(gnb_core_t *gnb_core) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     DWORD dwRetVal = 0;
-
     DWORD dwSize = 0;
     unsigned long status = 0;
-
     DWORD lastError = 0;
     SOCKADDR_IN localAddress;
-
     MIB_UNICASTIPADDRESS_ROW ipRow;
-
     InitializeUnicastIpAddressEntry( &ipRow );
-
     WintunGetAdapterLUID(tun_wintun_ctx->adapter_handle, &ipRow.InterfaceLuid);
-
     ipRow.Address.si_family  = AF_INET;
-
     ipRow.OnLinkPrefixLength = (UINT8)ntod( gnb_core->local_node->tun_netmask_addr4.s_addr );
-
-    InetPton(AF_INET, GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4), &ipRow.Address.Ipv4.sin_addr);
-
+    memcpy(&ipRow.Address.Ipv4.sin_addr,&gnb_core->local_node->tun_addr4,4);
     status = DeleteUnicastIpAddressEntry(&ipRow);
-
     status = CreateUnicastIpAddressEntry(&ipRow);
     if (status != ERROR_SUCCESS && status != ERROR_OBJECT_ALREADY_EXISTS)
     {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Failed to set IPv4 address: %s\n", GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Failed to set IPv4 address: %s\n",
+                 gnb_in4_addr_str(&gnb_core->local_node->tun_addr4,address_string1,0)
+        );
         return -3;
     }
-    GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Success to set IPv4 address: %s\n", GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4));
+    GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Success to set IPv4 address: %s\n",
+             gnb_in4_addr_str(&gnb_core->local_node->tun_addr4,address_string1,0)
+    );
     return 0;
-
 }
 
-static int set_addr6(gnb_core_t *gnb_core){
-
+static int set_addr6(gnb_core_t *gnb_core) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     DWORD dwRetVal = 0;
-
     DWORD dwSize = 0;
     unsigned long status = 0;
-
     DWORD lastError = 0;
     SOCKADDR_IN localAddress;
-
     MIB_UNICASTIPADDRESS_ROW ipRow;
-
     InitializeUnicastIpAddressEntry( &ipRow );
-
     WintunGetAdapterLUID(tun_wintun_ctx->adapter_handle, &ipRow.InterfaceLuid);
-
     ipRow.Address.si_family = AF_INET6;
     ipRow.OnLinkPrefixLength = 96;
-
-    InetPton(AF_INET6, GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr), &ipRow.Address.Ipv6.sin6_addr);
-
+    memcpy(&ipRow.Address.Ipv6.sin6_addr,&gnb_core->local_node->tun_ipv6_addr,16);
     status = DeleteUnicastIpAddressEntry(&ipRow);
-
     status = CreateUnicastIpAddressEntry(&ipRow);
     if (status != ERROR_SUCCESS && status != ERROR_OBJECT_ALREADY_EXISTS)
     {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Failed to set IPv6 address: %s\n", GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Failed to set IPv6 address: %s\n",
+                gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr, address_string1,0)
+        );
         return -3;
     }
-    GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Success to set IPv6 address: %s\n", GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr));
+    GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Success to set IPv6 address: %s\n",
+             gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr, address_string1,0)
+    );
     return 0;
-
 }
 
-static int open_tun_wintun(gnb_core_t *gnb_core){
-
+static int open_tun_wintun(gnb_core_t *gnb_core) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
     int ret;
     DWORD LastError;
     if ( NULL != tun_wintun_ctx->adapter_handle ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Wintun Adapter Exist!\n");
         return -1;
     }
-    
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "WintunCreateAdapter Start...\n");
     struct in_addr addr4 = gnb_core->local_node->tun_addr4;
     GUID Guid = { 0xdeadbabe, 0xcafe, 0xbeef, { 0x01, 0x23, 0x45, 0x67, addr4.S_un.S_un_b.s_b1, addr4.S_un.S_un_b.s_b2, addr4.S_un.S_un_b.s_b3, addr4.S_un.S_un_b.s_b4 } };
@@ -340,7 +279,6 @@ static int open_tun_wintun(gnb_core_t *gnb_core){
         Adapter =  WintunCreateAdapter(w_if_name, WINTUN_POOL_NAME, &Guid);
         try_count--;
     }
-    
     if (NULL == Adapter)
     {
         DWORD lastErr = GetLastError();
@@ -356,12 +294,7 @@ static int open_tun_wintun(gnb_core_t *gnb_core){
         }
     }
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "WintunCreateAdapter Success...\n");
-
-
-
-
     tun_wintun_ctx->adapter_handle = Adapter;
-
     DWORD status4 = set_addr4(gnb_core);
     if(0 != status4)
     {
@@ -376,8 +309,6 @@ static int open_tun_wintun(gnb_core_t *gnb_core){
         tun_wintun_ctx->adapter_handle = NULL;
         return status6;
     }
-
-
     WINTUN_SESSION_HANDLE Session = WintunStartSession(tun_wintun_ctx->adapter_handle, WINTUN_RING_CAPACITY);
     if (!Session)
     {
@@ -388,30 +319,17 @@ static int open_tun_wintun(gnb_core_t *gnb_core){
     }
     GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Success to WintunStartSession!\n");
     tun_wintun_ctx->session = Session;
-
-
-
     tun_wintun_ctx->hReadEvent = WintunGetReadWaitEvent(Session);
-
-
-
-
-
-
     if ( !tun_wintun_ctx->skip_if_script ) {
         if_up(gnb_core);
     }
-
     return 0;
-
 }
 
-
-static int read_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size){
+static int read_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
     WINTUN_SESSION_HANDLE session = (WINTUN_SESSION_HANDLE)tun_wintun_ctx->session;
     HANDLE WaitHandles[] = { tun_wintun_ctx->hReadEvent, tun_wintun_ctx->hQuitEvent };
-
     DWORD packet_size;
     BYTE *packet = WintunReceivePacket(session, &packet_size);
     if(NULL != packet){
@@ -420,7 +338,7 @@ static int read_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size){
         WintunReleaseReceivePacket(session, packet);
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "read_tun_wintun bufsize:%d, real WintunReceivePacket size:%d!\n", buf_size,  packet_size);
         return real_size;
-    }else{
+    } else {
         DWORD LastError  = GetLastError();
         switch (LastError )
         {
@@ -438,11 +356,9 @@ static int read_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size){
     return ERROR_SUCCESS;
 }
 
-
-static int write_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size){
+static int write_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size) {
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
     WINTUN_SESSION_HANDLE session = (WINTUN_SESSION_HANDLE)tun_wintun_ctx->session;
-
     BYTE *Packet = WintunAllocateSendPacket(session, buf_size);
     memcpy(Packet, buf, buf_size);
     DWORD LastError = GetLastError();
@@ -463,47 +379,35 @@ static int write_tun_wintun(gnb_core_t *gnb_core, void *buf, size_t buf_size){
     }
 }
 
-
-static int close_tun_wintun(gnb_core_t *gnb_core){
-
+static int close_tun_wintun(gnb_core_t *gnb_core) {
     gnb_core->loop_flag = 0;
-
     gnb_core_wintun_ctx_t *tun_wintun_ctx = gnb_core->platform_ctx;
-
     if ( !tun_wintun_ctx->skip_if_script ) {
         if_down(gnb_core);
     }
-
     if(NULL != tun_wintun_ctx->hReadEvent)
     {
         SetEvent(tun_wintun_ctx->hReadEvent);
         tun_wintun_ctx->hReadEvent = NULL;
     }
-
     if(NULL != tun_wintun_ctx->hQuitEvent)
     {
         SetEvent(tun_wintun_ctx->hQuitEvent);
         tun_wintun_ctx->hQuitEvent = NULL;
     }
-
     if(NULL != tun_wintun_ctx->session)
     {
         WintunEndSession(tun_wintun_ctx->session);
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Close Tun, WintunEndSession!\n");
         tun_wintun_ctx->session = NULL;
     }
-
     if(NULL != tun_wintun_ctx->adapter_handle)
     {
         WintunCloseAdapter(tun_wintun_ctx->adapter_handle);
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Close Tun, WintunCloseAdapter!\n");
         tun_wintun_ctx->adapter_handle = NULL;
     }
-
-    
-
     return release_tun_wintun(gnb_core);
-
 }
 
 static int release_tun_wintun(gnb_core_t *gnb_core){
@@ -516,24 +420,17 @@ static int release_tun_wintun(gnb_core_t *gnb_core){
             tun_wintun_ctx->drv_module = NULL;
             GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Release Tun, FreeLibrary!\n");
         }
-        free(gnb_core->platform_ctx);
+        gnb_heap_free(gnb_core->heap, gnb_core->platform_ctx);
         gnb_core->platform_ctx = NULL;
     }
     return 0;
 }
 
 gnb_tun_drv_t gnb_tun_drv_wintun = {
-
     init_tun_wintun,
-
     open_tun_wintun,
-
     read_tun_wintun,
-
     write_tun_wintun,
-
     close_tun_wintun,
-
     release_tun_wintun
-
 };

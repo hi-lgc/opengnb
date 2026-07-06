@@ -44,7 +44,7 @@ typedef struct _gnb_hash32_map_t{
     gnb_hash32_bucket_t **buckets;
 }gnb_hash32_map_t;
 
-gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num,uint32_t kv_num);
+gnb_hash32_map_t *gnb_hash32_create(gnb_heap_t *heap, uint32_t bucket_num);
 void gnb_hash32_release(gnb_hash32_map_t *hash32_map);
 gnb_kv32_t* gnb_hash32_set(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len, void *value, uint32_t value_len);
 int gnb_hash32_store(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len, void *value, uint32_t value_len);

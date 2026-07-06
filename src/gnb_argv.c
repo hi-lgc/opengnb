@@ -188,7 +188,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
     conf->index_service_log_level = GNB_LOG_LEVEL_UNSET;
     conf->detect_log_level  = GNB_LOG_LEVEL_UNSET;
 
-	conf->pf_route_bits = 0x0;
+    conf->pf_route_bits = 0x0;
 
     conf->udp_socket_type = GNB_ADDR_TYPE_IPV4 | GNB_ADDR_TYPE_IPV6;
 
@@ -328,7 +328,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
       { "ur1",                       required_argument,  0,  SET_UR1 },
 
       { "pf-route",                  required_argument,  0,  SET_PF_ROUTE },
-	  { "pf-route-bits",             required_argument,  0,  SET_PF_ROUTE_BITS },
+      { "pf-route-bits",             required_argument,  0,  SET_PF_ROUTE_BITS },
 
       { "unified-forwarding",        required_argument,  0, 'U' },
       { "standard-forwarding",       required_argument,  0, SET_STANDARD_FORWARDING},
@@ -355,7 +355,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
       { "index-service-log-level",   required_argument,  0,   SET_INDEX_SERVICE_LOG_LEVEL },
       { "node-detect-log-level",     required_argument,  0,   SET_DETECT_LOG_LEVEL },      
 
-	  { "version",  no_argument, 0, 'v' },
+      { "version",  no_argument, 0, 'v' },
       { "help",     no_argument, 0, 'h' },
 
       { 0, 0, 0, 0 }
@@ -606,9 +606,9 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         case SET_PF_ROUTE:
             snprintf(conf->pf_route, NAME_MAX, "%s", optarg);
             break;
-		case SET_PF_ROUTE_BITS:
-			conf->pf_route_bits      = (uint32_t)strtoul(optarg, NULL, 0);
-			break;
+        case SET_PF_ROUTE_BITS:
+            conf->pf_route_bits      = (uint32_t)strtoul(optarg, NULL, 0);
+            break;
         case SET_TUN:
             if ( !strncmp(optarg, "on", 2) ) {
                 conf->activate_tun  = 1;
@@ -721,9 +721,9 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         case 'e':
             gnb_setup_es_argv(optarg);
             break;
-		case 'v':
-			show_description();
-			exit(0);
+        case 'v':
+            show_description();
+            exit(0);
         case 'h':
             show_useage(argc, argv);
             exit(0);
@@ -731,7 +731,7 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         default:
             break;
         }
-		
+        
         if ( 0 == opt ) {
             switch (flag) {
             case SET_LOG_UDP4:
@@ -775,33 +775,33 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         conf->unified_forwarding = GNB_UNIFIED_FORWARDING_OFF;
     }
     gnb_addr_secure = conf->addr_secure;
-	switch (conf->memory) {
-	case GNB_MEMORY_SCALE_TINY:
-		conf->payload_block_size = 1024*8;
-		conf->max_heap_fragment  = 1024*8;
-		conf->index_service_lru_size = 1024*2;
-		break;
-	case GNB_MEMORY_SCALE_SMALL:
-		conf->payload_block_size = 1024*16;
-		conf->max_heap_fragment  = 1024*16;
-		conf->index_service_lru_size = 1024*4;
-		break;
-	case GNB_MEMORY_SCALE_LARGE:
-		conf->payload_block_size = 1024*32;
-		conf->max_heap_fragment  = 1024*32;
-		conf->index_service_lru_size = 1024*32;
-		break;
-	case GNB_MEMORY_SCALE_HUGE:
-		conf->payload_block_size = 1024*64;
-		conf->max_heap_fragment  = 1024*64;
-		conf->index_service_lru_size = 1024*64;
-		break;
-	default:
-		conf->payload_block_size = 1024*8;
-		conf->max_heap_fragment  = 1024*8;
-		conf->index_service_lru_size = 1024*2;
-		break;
-	}
+    switch (conf->memory) {
+    case GNB_MEMORY_SCALE_TINY:
+        conf->payload_block_size = 1024*8;
+        conf->max_heap_fragment  = 1024*8;
+        conf->index_service_lru_size = 1024*2;
+        break;
+    case GNB_MEMORY_SCALE_SMALL:
+        conf->payload_block_size = 1024*16;
+        conf->max_heap_fragment  = 1024*16;
+        conf->index_service_lru_size = 1024*4;
+        break;
+    case GNB_MEMORY_SCALE_LARGE:
+        conf->payload_block_size = 1024*32;
+        conf->max_heap_fragment  = 1024*32;
+        conf->index_service_lru_size = 1024*32;
+        break;
+    case GNB_MEMORY_SCALE_HUGE:
+        conf->payload_block_size = 1024*64;
+        conf->max_heap_fragment  = 1024*64;
+        conf->index_service_lru_size = 1024*64;
+        break;
+    default:
+        conf->payload_block_size = 1024*8;
+        conf->max_heap_fragment  = 1024*8;
+        conf->index_service_lru_size = 1024*2;
+        break;
+    }
 
     if ( 1 == conf->multi_socket ) {
         conf->udp6_socket_num = 1;
@@ -857,27 +857,27 @@ gnb_conf_t* gnb_argv(int argc,char *argv[]) {
         }
     }
     if ( 0 == conf->lite_mode && 0==conf->public_index_service ) {
-		#if defined(GNB_OPENWRT_BUILD)
-		if ( '\0' == conf->map_file[0] ) {
-			snprintf(conf->map_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.map",       conf->udp4_ports[0]);
-		}
-		if ( '\0' == conf->pid_file[0] ) {
-			snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.pid",       conf->udp4_ports[0]);
-		}
-		if ( '\0' == conf->node_cache_file[0] ) {
-			snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "%s/node_cache.%d.dump", conf->binary_dir, conf->udp4_ports[0]);
-		}
-		#else
-		if ( '\0' == conf->map_file[0] ) {
-			snprintf(conf->map_file, PATH_MAX+NAME_MAX, "%s/%s", conf->conf_dir, "gnb.map");
-		}
-		if ( '\0' == conf->pid_file[0] ) {
-			snprintf(conf->pid_file, PATH_MAX+NAME_MAX,"%s/%s", conf->conf_dir, "gnb.pid");
-		}
-		if ( '\0' == conf->node_cache_file[0] ) {
-			snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX,"%s/%s", conf->conf_dir, "node_cache.dump");
-		}
-		#endif
+        #if defined(GNB_OPENWRT_BUILD)
+        if ( '\0' == conf->map_file[0] ) {
+            snprintf(conf->map_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.map",       conf->udp4_ports[0]);
+        }
+        if ( '\0' == conf->pid_file[0] ) {
+            snprintf(conf->pid_file,        PATH_MAX+NAME_MAX, "/tmp/gnb.%d.pid",       conf->udp4_ports[0]);
+        }
+        if ( '\0' == conf->node_cache_file[0] ) {
+            snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX, "%s/node_cache.%d.dump", conf->binary_dir, conf->udp4_ports[0]);
+        }
+        #else
+        if ( '\0' == conf->map_file[0] ) {
+            snprintf(conf->map_file, PATH_MAX+NAME_MAX, "%s/%s", conf->conf_dir, "gnb.map");
+        }
+        if ( '\0' == conf->pid_file[0] ) {
+            snprintf(conf->pid_file, PATH_MAX+NAME_MAX,"%s/%s", conf->conf_dir, "gnb.pid");
+        }
+        if ( '\0' == conf->node_cache_file[0] ) {
+            snprintf(conf->node_cache_file, PATH_MAX+NAME_MAX,"%s/%s", conf->conf_dir, "node_cache.dump");
+        }
+        #endif
     } else {
         conf->conf_dir[0] = '\0';
         #ifdef __UNIX_LIKE_OS__
@@ -991,7 +991,7 @@ static void show_useage(int argc,char *argv[]) {
     printf("      --address-secure              hide part of ip address in logs \"on\",\"off\" default:\"on\"\n");
     printf("      --if-dump                     dump the interface data frame \"on\",\"off\" default:\"off\"\n");
     printf("      --pf-route                    packet filter route\n");
-	printf("      --pf-route-bits               pf route 32bits options 0x1:forwading without key exchange\n");
+    printf("      --pf-route-bits               pf route 32bits options 0x1:forwading without key exchange\n");
 
     printf("      --safe-index                  \"on\",\"off\" default:\"off\"\n");
     printf("      --multi-socket                \"on\",\"off\" default:\"off\"\n");

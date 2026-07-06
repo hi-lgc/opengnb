@@ -276,6 +276,7 @@ void gnb_pf_tun(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core, gnb_payload16_t *p
     int pf_tun_route_status   = GNB_PF_TUN_ROUTE_INIT;
     int pf_tun_forward_status = GNB_PF_TUN_FORWARD_INIT;
     gnb_uuid_t fwd_uuid64 = 0;
+    char gnb_hex256_str1[256+1];
     gnb_core->select_fwd_node = gnb_select_forward_node(gnb_core);
     pf_ctx_st.pf_status = GNB_PF_TUN_FRAME_INIT;
     if ( 1 == gnb_core->conf->if_dump ) {
@@ -415,10 +416,21 @@ pf_tun_fwd:
     }
     gnb_p2p_forward_payload_to_node(gnb_core, pf_ctx_st.fwd_node, pf_ctx_st.fwd_payload);
     if ( 1 == gnb_core->conf->if_dump ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome TUN to INET node=%llu [%s]\n", pf_ctx_st.fwd_node->uuid64, GNB_HEX2_BYTE256((void *)pf_ctx_st.fwd_payload) );
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome TUN to INET node=%llu [%s]\n",
+                 pf_ctx_st.fwd_node->uuid64,
+                 gnb_get_hex_string256((void *)pf_ctx_st.fwd_payload,gnb_hex256_str1)
+        );
     }
+
+    /*
     pf_ctx_st.fwd_node->in_bytes     += pf_ctx_st.ip_frame_size;
     gnb_core->local_node->out_bytes  += pf_ctx_st.ip_frame_size;
+    */
+    if ( NULL != pf_ctx_st.dst_node ) {
+        pf_ctx_st.dst_node->in_bytes     += pf_ctx_st.ip_frame_size;
+        gnb_core->local_node->out_bytes  += pf_ctx_st.ip_frame_size;
+    }
+
     if ( pf_ctx_st.dst_uuid64 == pf_ctx_st.fwd_node->uuid64 ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, ">>> tun payload forward to inet src=%llu dst=%llu >>>\n", pf_ctx_st.src_uuid64, pf_ctx_st.fwd_node->uuid64);
     } else {
@@ -426,14 +438,12 @@ pf_tun_fwd:
     }
 
 pf_tun_finish:
-
     if ( 0 == pf_ctx_st.unified_forwarding && NULL != pf_ctx_st.dst_node && NULL == pf_ctx_st.fwd_node && 1 == pf_ctx_st.universal_udp4_relay ) {
         gnb_send_ur0_frame(gnb_core, pf_ctx_st.dst_node, pf_ctx_st.fwd_payload);
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "tun try to universal relay src=%llu dst=%llu\n", pf_ctx_st.src_uuid64, pf_ctx_st.dst_uuid64);
     }
 
 if_dump:
-
     if ( 1 == gnb_core->conf->if_dump ) {
         fwd_uuid64 = NULL != pf_ctx_st.fwd_node ? pf_ctx_st.fwd_node->uuid64:0;
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "tun src=%llu dst=%llu fwd=%llu [%s] [%s] relay=%d,unified=%d,direct=%d,forward=%d ip_frame_size=%u\n",
@@ -465,6 +475,7 @@ void gnb_pf_inet(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core, gnb_payload16_t *
     int pf_inet_forwad_status = GNB_PF_INET_FORWARD_INIT;
     int ret;
     gnb_uuid_t fwd_uuid64 = 0;
+    char gnb_hex256_str1[256+1];
     gnb_core->select_fwd_node = gnb_select_forward_node(gnb_core);
     if ( 1 == gnb_core->conf->if_dump ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "----- GNB PF INET BEGIN -----\n");
@@ -583,7 +594,10 @@ void gnb_pf_inet(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core, gnb_payload16_t *
     if ( gnb_core->conf->activate_tun && GNB_PF_FWD_TUN == pf_ctx_st.pf_fwd ) {
         gnb_core->drv->write_tun(gnb_core, pf_ctx_st.ip_frame, pf_ctx_st.ip_frame_size);
         if ( 1 == gnb_core->conf->if_dump ) {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome INET to TUN src node=%llu [%s]\n", pf_ctx_st.src_node->uuid64, GNB_HEX2_BYTE256((void *)pf_ctx_st.fwd_payload) );
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome INET to TUN src node=%llu [%s]\n",
+                     pf_ctx_st.src_node->uuid64,
+                     gnb_get_hex_string256((void *)pf_ctx_st.fwd_payload,gnb_hex256_str1)
+            );
         }
         fwd_uuid64 = pf_ctx_st.dst_uuid64;
         pf_inet_forwad_status = GNB_PF_INET_FORWARD_TO_TUN;
@@ -595,16 +609,18 @@ void gnb_pf_inet(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core, gnb_payload16_t *
     if ( GNB_PF_FWD_INET == pf_ctx_st.pf_fwd && NULL != pf_ctx_st.fwd_node && NULL != pf_ctx_st.fwd_payload ) {
         gnb_p2p_forward_payload_to_node(gnb_core, pf_ctx_st.fwd_node, pf_ctx_st.fwd_payload);
         if ( 1 == gnb_core->conf->if_dump ) {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome INET to INET dst node=%llu [%s]\n", pf_ctx_st.fwd_node->uuid64, GNB_HEX2_BYTE256((void *)pf_ctx_st.fwd_payload) );
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "payload frome INET to INET dst node=%llu [%s]\n",
+                     pf_ctx_st.fwd_node->uuid64,
+                     gnb_get_hex_string256((void *)pf_ctx_st.fwd_payload,gnb_hex256_str1)
+            );
         }
         pf_inet_forwad_status = GNB_PF_INET_FORWARD_TO_INET;
-        gnb_core->local_node->out_bytes += pf_ctx_st.ip_frame_size;
-        pf_ctx_st.fwd_node->in_bytes    += pf_ctx_st.ip_frame_size;
+        //gnb_core->local_node->out_bytes += pf_ctx_st.ip_frame_size;
+        //pf_ctx_st.fwd_node->in_bytes    += pf_ctx_st.ip_frame_size;
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "<*< inet payload forward to inet src=%llu dst=%llu fwd=%llu >*>\n", pf_ctx_st.src_uuid64, pf_ctx_st.dst_uuid64, fwd_uuid64);
     }
 
 pf_inet_finish:
-
     if ( 1 == gnb_core->conf->if_dump ) {
         GNB_LOG3(gnb_core->log, GNB_LOG_ID_PF, "inet src=%llu dst=%llu fwd=%llu [%s] [%s] [%s] ip_frame_size=%u\n",
                    pf_ctx_st.src_uuid64, pf_ctx_st.dst_uuid64, fwd_uuid64,

@@ -71,4 +71,10 @@ typedef struct _gnb_es_ctx {
 
 #define DISCOVER_LAN_IN_BROADCAST_PORT    8998
 
+#define WITH_MINIUPNPC 1
+
+#if defined(WITHOUT_MINIUPNPC)
+#undef WITH_MINIUPNPC
+#endif
+
 #endif

@@ -102,7 +102,7 @@ gnb_mmap_block_t* gnb_mmap_create(const char *filename, size_t block_size, int m
     return mmap_block;
 }
 
-void gnb_mmap_release(gnb_mmap_block_t *mmap_block){
+void gnb_mmap_release(gnb_mmap_block_t *mmap_block) {
     munmap(mmap_block->block,mmap_block->block_size);
     close(mmap_block->fd);
     if ( mmap_block->mmap_type & (GNB_MMAP_TYPE_CREATE|GNB_MMAP_TYPE_CLEANEXIT) ) {

@@ -57,7 +57,6 @@ static int pf_tun_frame_cb(gnb_core_t *gnb_core, gnb_pf_t *pf, gnb_pf_ctx_t *pf_
         return pf_ctx->pf_status;
     }
     if ( 0x4 == ip_frame_head->version ) {
-
         inet_ntop(AF_INET, &ip_frame_head->saddr, src_ipv4_string, INET_ADDRSTRLEN);
         inet_ntop(AF_INET, &ip_frame_head->daddr, dst_ipv4_string, INET_ADDRSTRLEN);
 

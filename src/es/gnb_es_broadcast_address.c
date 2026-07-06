@@ -43,48 +43,39 @@
 #include "gnb_udp.h"
 #include "gnb_index_frame_type.h"
 
+extern uint8_t addr_secure;
 
 static void send_address_to_node(gnb_es_ctx *es_ctx, gnb_node_t *src_node, gnb_node_t *dst_node) {
     unsigned char payload_buffer[ PUSH_ADDR_FRAME_PAYLOAD_SIZE ];
     gnb_payload16_t *payload;
     gnb_ctl_block_t  *ctl_block;
     gnb_log_ctx_t *log;
-
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     ctl_block = es_ctx->ctl_block;
-
     log = es_ctx->log;
-
     payload = (gnb_payload16_t *)payload_buffer;
     memset(payload_buffer, 0, PUSH_ADDR_FRAME_PAYLOAD_SIZE);
-
     payload->type = GNB_PAYLOAD_TYPE_INDEX;
     payload->sub_type = PAYLOAD_SUB_TYPE_PUSH_ADDR;
-
     gnb_payload16_set_data_len( payload,  sizeof(push_addr_frame_t) );
-
     push_addr_frame_t *push_addr_frame = (push_addr_frame_t *)payload->data;
-
     push_addr_frame->data.node_uuid64 = gnb_htonll(src_node->uuid64);
     memcpy(push_addr_frame->data.node_key, src_node->key512, 64);
-
     push_addr_frame->data.arg0 = 'N';
-
     memcpy(&push_addr_frame->data.addr6_a, &src_node->udp_sockaddr6.sin6_addr, 16);
     push_addr_frame->data.port6_a = src_node->udp_sockaddr6.sin6_port;
-
     memcpy(&push_addr_frame->data.addr4_a, &src_node->udp_sockaddr4.sin_addr.s_addr, 4);
     push_addr_frame->data.port4_a = src_node->udp_sockaddr4.sin_port;
-
     snprintf(push_addr_frame->data.text,32,"%llu>%llu>%llu", ctl_block->core_zone->local_uuid, src_node->uuid64, dst_node->uuid64);
-
     struct sockaddr_in udp_sockaddr4;
     memset(&udp_sockaddr4, 0, sizeof(struct sockaddr_in));
     memcpy(&udp_sockaddr4.sin_addr.s_addr,&dst_node->tun_addr4.s_addr,4);
     udp_sockaddr4.sin_port = dst_node->tun_sin_port4;
     udp_sockaddr4.sin_family = AF_INET;
     sendto(es_ctx->udp_socket4, (void *)payload, GNB_PAYLOAD16_FRAME_SIZE(payload), 0, (struct sockaddr *)&udp_sockaddr4, sizeof(struct sockaddr_in));
-
-    GNB_LOG1(log, GNB_LOG_ID_ES_BROADCAST, "send_address_to_node %s\n", GNB_SOCKADDR4STR1(&udp_sockaddr4));
+    GNB_LOG1(log, GNB_LOG_ID_ES_BROADCAST, "send_address_to_node %s\n",
+             gnb_sockaddr_in4_str(&udp_sockaddr4, address_string1,addr_secure)
+    );
 }
 
 static void broadcast_address_to_node(gnb_es_ctx *es_ctx, gnb_node_t *src_node) {
@@ -93,11 +84,9 @@ static void broadcast_address_to_node(gnb_es_ctx *es_ctx, gnb_node_t *src_node) 
     gnb_log_ctx_t *log;
     int node_num;
     int i;
-
     ctl_block = es_ctx->ctl_block;
     log = es_ctx->log;
     node_num = ctl_block->node_zone->node_num;
-
     for ( i=0; i<node_num; i++ ) {
         dst_node = &ctl_block->node_zone->node[i];
         if ( dst_node->uuid64 == src_node->uuid64 ) {

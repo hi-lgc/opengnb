@@ -281,8 +281,8 @@ static int set_addr4(gnb_core_t *gnb_core) {
     InitializeUnicastIpAddressEntry( &ipRow );
     ipRow.InterfaceIndex = tun_win_ctx->tun_if_id;
     ipRow.Address.si_family  = AF_INET;
-    ipRow.OnLinkPrefixLength = (UINT8)ntod( gnb_core->local_node->tun_netmask_addr4.s_addr );
-    InetPton(AF_INET, GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4), &ipRow.Address.Ipv4.sin_addr);
+    ipRow.OnLinkPrefixLength = (UINT8)ntod(gnb_core->local_node->tun_netmask_addr4.s_addr);
+    memcpy(&ipRow.Address.Ipv4.sin_addr,&gnb_core->local_node->tun_addr4,4);
     status = DeleteUnicastIpAddressEntry(&ipRow);
     status = CreateUnicastIpAddressEntry(&ipRow);
     return 0;
@@ -300,7 +300,7 @@ static int set_addr6(gnb_core_t *gnb_core) {
     ipRow.InterfaceIndex = tun_win_ctx->tun_if_id;
     ipRow.Address.si_family = AF_INET6;
     ipRow.OnLinkPrefixLength = 96;
-    InetPton(AF_INET6, GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr), &ipRow.Address.Ipv6.sin6_addr);
+    memcpy(&ipRow.Address.Ipv6.sin6_addr, &gnb_core->local_node->tun_ipv6_addr, 16);
     status = DeleteUnicastIpAddressEntry(&ipRow);
     status = CreateUnicastIpAddressEntry(&ipRow);
     return 0;

@@ -241,6 +241,8 @@ static int set_addr4(char *if_name, char *ip, char *netmask) {
 }
 
 static int open_tun_darwin(gnb_core_t *gnb_core) {
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     if ( -1 != gnb_core->tun_fd ) {
         return -1;
     }
@@ -248,8 +250,18 @@ static int open_tun_darwin(gnb_core_t *gnb_core) {
     memset(gnb_core->ifname,0,IFNAMSIZ);
     socklen_t ifname_len = IFNAMSIZ;
     getsockopt (gnb_core->tun_fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, gnb_core->ifname, &ifname_len);
-    set_addr4(gnb_core->ifname, GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4), GNB_ADDR4STR_PLAINTEXT2(&gnb_core->local_node->tun_netmask_addr4));
-    set_addr6(gnb_core->ifname, GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr), "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000");
+    if ( gnb_core->conf->udp_socket_type & GNB_ADDR_TYPE_IPV4 ) {
+        set_addr4(gnb_core->ifname,
+                  gnb_in4_addr_str(&gnb_core->local_node->tun_addr4, address_string1, 0),
+                  gnb_in4_addr_str(&gnb_core->local_node->tun_netmask_addr4, address_string2, 0)
+        );
+    }
+    if ( gnb_core->conf->udp_socket_type & GNB_ADDR_TYPE_IPV6 ) {
+        set_addr6(gnb_core->ifname,
+                  gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr, address_string1, 0),
+                  "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000"
+        );
+    }
     set_route4(gnb_core);
     setifmtu(gnb_core->ifname, gnb_core->conf->mtu);
     if_up_script(gnb_core);

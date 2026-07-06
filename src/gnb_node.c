@@ -41,7 +41,7 @@
 #include "gnb_unified_forwarding.h"
 #include "gnb_binary.h"
 
-gnb_node_t * gnb_node_init(gnb_core_t *gnb_core, gnb_uuid_t uuid64){
+gnb_node_t * gnb_node_init(gnb_core_t *gnb_core, gnb_uuid_t uuid64) {
     gnb_node_t *node = &gnb_core->ctl_block->node_zone->node[gnb_core->node_nums];
     memset(node,0,sizeof(gnb_node_t));
     node->uuid64 = uuid64;
@@ -150,95 +150,90 @@ void gnb_add_index_node_ring(gnb_core_t *gnb_core, gnb_uuid_t uuid64) {
 }
 
 void gnb_add_routenode_ring(gnb_core_t *gnb_core, gnb_hash32_map_t *node_ring_map, uint32_t tun_subnet_addr4, gnb_node_t *node) {
-	gnb_node_ring_t *node_ring;
-	node_ring = GNB_HASH32_UINT32_GET_PTR(node_ring_map, tun_subnet_addr4);
-	if ( NULL == node_ring ) {
-		node_ring = (gnb_node_ring_t *)gnb_heap_alloc(gnb_core->heap,sizeof(gnb_node_ring_t));
-		memset(node_ring, 0, sizeof(gnb_node_ring_t));
-		GNB_HASH32_UINT32_SET(node_ring_map, tun_subnet_addr4, node_ring);
-	}
-	if ( node_ring->num >= GNB_MAX_NODE_RING ) {
-		node_ring->num = GNB_MAX_NODE_RING;
-		return;
-	}
-	node_ring->nodes[node_ring->num] = node;
-	node_ring->cur_index = node_ring->num;
-	node_ring->num++;
+    gnb_node_ring_t *node_ring;
+    node_ring = GNB_HASH32_UINT32_GET_PTR(node_ring_map, tun_subnet_addr4);
+    if ( NULL == node_ring ) {
+        node_ring = (gnb_node_ring_t *)gnb_heap_alloc(gnb_core->heap,sizeof(gnb_node_ring_t));
+        memset(node_ring, 0, sizeof(gnb_node_ring_t));
+        GNB_HASH32_UINT32_SET(node_ring_map, tun_subnet_addr4, node_ring);
+    }
+    if ( node_ring->num >= GNB_MAX_NODE_RING ) {
+        node_ring->num = GNB_MAX_NODE_RING;
+        return;
+    }
+    node_ring->nodes[node_ring->num] = node;
+    node_ring->cur_index = node_ring->num;
+    node_ring->num++;
 }
 
 gnb_node_t* gnb_select_route4_node(gnb_core_t *gnb_core, uint32_t dst_ip_int) {
-	int i;
-	char ip_string[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &dst_ip_int, ip_string, INET_ADDRSTRLEN);
-	gnb_node_t *node=NULL;
-	gnb_node_ring_t *node_ring;
-	uint32_t dsp_ip_key = dst_ip_int;
+    int i;
+    char ip_string[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &dst_ip_int, ip_string, INET_ADDRSTRLEN);
+    gnb_node_t *node=NULL;
+    gnb_node_ring_t *node_ring;
+    uint32_t dsp_ip_key = dst_ip_int;
 
-	node = GNB_HASH32_UINT32_GET_PTR(gnb_core->ipv4_node_map, dsp_ip_key);
-	if ( node ) {
-		goto finish;
-	}
+    node = GNB_HASH32_UINT32_GET_PTR(gnb_core->ipv4_node_map, dsp_ip_key);
+    if ( node ) {
+        goto finish;
+    }
 
-	dsp_ip_key = dst_ip_int & htonl(IN_CLASSC_NET);
-	node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subnetc_node_ring_map, dsp_ip_key);
-	if ( node_ring ) {
-		goto got_node_ring;
-	}
-	dsp_ip_key = dst_ip_int & htonl(IN_CLASSB_NET);
-	node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subnetb_node_ring_map, dsp_ip_key);
-	if ( node_ring ) {
-		goto got_node_ring;
-	}
-	dsp_ip_key = dst_ip_int & htonl(IN_CLASSA_NET);
-	node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subneta_node_ring_map, dsp_ip_key);
-	if ( node_ring ) {
-		goto got_node_ring;
-	}
+    dsp_ip_key = dst_ip_int & htonl(IN_CLASSC_NET);
+    node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subnetc_node_ring_map, dsp_ip_key);
+    if ( node_ring ) {
+        goto got_node_ring;
+    }
+    dsp_ip_key = dst_ip_int & htonl(IN_CLASSB_NET);
+    node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subnetb_node_ring_map, dsp_ip_key);
+    if ( node_ring ) {
+        goto got_node_ring;
+    }
+    dsp_ip_key = dst_ip_int & htonl(IN_CLASSA_NET);
+    node_ring = GNB_HASH32_UINT32_GET_PTR(gnb_core->subneta_node_ring_map, dsp_ip_key);
+    if ( node_ring ) {
+        goto got_node_ring;
+    }
+    return NULL;
 
-	return NULL;
-	
 got_node_ring:
-	if ( 0 == node_ring->num ) {
-		return NULL;
-	}
-	if ( 1 == node_ring->num ) {
-		return node_ring->nodes[0];
-	}
-	if ( GNB_MULTI_ADDRESS_TYPE_SIMPLE_FAULT_TOLERANT == gnb_core->conf->multi_forward_type ) {
-		goto SIMPLE_FAULT_TOLERANT;
-	}
-	if ( GNB_MULTI_ADDRESS_TYPE_SIMPLE_LOAD_BALANCE == gnb_core->conf->multi_forward_type ) {
-		goto SIMPLE_LOAD_BALANCE;
-	}
+    if ( 0 == node_ring->num ) {
+        return NULL;
+    }
+    if ( 1 == node_ring->num ) {
+        return node_ring->nodes[0];
+    }
+    if ( GNB_MULTI_ADDRESS_TYPE_SIMPLE_FAULT_TOLERANT == gnb_core->conf->multi_forward_type ) {
+        goto SIMPLE_FAULT_TOLERANT;
+    }
+    if ( GNB_MULTI_ADDRESS_TYPE_SIMPLE_LOAD_BALANCE == gnb_core->conf->multi_forward_type ) {
+        goto SIMPLE_LOAD_BALANCE;
+    }
 SIMPLE_FAULT_TOLERANT:
-	for ( i=0; i<node_ring->num; i++ ) {
-		if ( (GNB_NODE_STATUS_IPV6_PONG | GNB_NODE_STATUS_IPV4_PONG) &node_ring->nodes[i]->udp_addr_status ) {
-			return node_ring->nodes[i];
-		}
-	}
-	return node_ring->nodes[0];
+    for ( i=0; i<node_ring->num; i++ ) {
+        if ( (GNB_NODE_STATUS_IPV6_PONG | GNB_NODE_STATUS_IPV4_PONG) &node_ring->nodes[i]->udp_addr_status ) {
+            return node_ring->nodes[i];
+        }
+    }
+    return node_ring->nodes[0];
 SIMPLE_LOAD_BALANCE:
-	if ( gnb_core->conf->pf_worker_num > 0 ) {
-		
-		
-		
-		return node_ring->nodes[0];
-	}
-	
-	
-	for ( i=0; i<node_ring->num; i++ ) {
-		node = node_ring->nodes[ node_ring->cur_index ];
-		if ( (GNB_NODE_STATUS_IPV6_PONG | GNB_NODE_STATUS_IPV4_PONG) & node->udp_addr_status ) {
-			node_ring->cur_index++;
-			if ( node_ring->cur_index >= node_ring->num ) {
-				node_ring->cur_index = 0;
-			}
-			return node;
-		}
-	}
+    if ( gnb_core->conf->pf_worker_num > 0 ) {
+        return node_ring->nodes[0];
+    }
+
+    for ( i=0; i<node_ring->num; i++ ) {
+        node = node_ring->nodes[ node_ring->cur_index ];
+        if ( (GNB_NODE_STATUS_IPV6_PONG | GNB_NODE_STATUS_IPV4_PONG) & node->udp_addr_status ) {
+            node_ring->cur_index++;
+            if ( node_ring->cur_index >= node_ring->num ) {
+                node_ring->cur_index = 0;
+            }
+            return node;
+        }
+    }
 
 finish:
-	return node;
+    return node;
 }
 
 gnb_node_t* gnb_select_forward_node(gnb_core_t *gnb_core) {
@@ -265,9 +260,9 @@ SIMPLE_FAULT_TOLERANT:
     }
     return gnb_core->fwd_node_ring.nodes[0];
 SIMPLE_LOAD_BALANCE:
-	if ( gnb_core->conf->pf_worker_num > 0 ) {
-		return gnb_core->fwd_node_ring.nodes[0];
-	}
+    if ( gnb_core->conf->pf_worker_num > 0 ) {
+        return gnb_core->fwd_node_ring.nodes[0];
+    }
     for ( i=0; i<gnb_core->fwd_node_ring.num; i++ ) {
         node = gnb_core->fwd_node_ring.nodes[ gnb_core->fwd_node_ring.cur_index ];
         if ( (GNB_NODE_STATUS_IPV6_PONG | GNB_NODE_STATUS_IPV4_PONG) & node->udp_addr_status ) {
@@ -303,7 +298,7 @@ void gnb_send_to_address(gnb_core_t *gnb_core, gnb_address_t *address, gnb_paylo
     }
 }
 
-void gnb_send_udata_to_address(gnb_core_t *gnb_core, gnb_address_t *address, void *udata, size_t udata_size){
+void gnb_send_udata_to_address(gnb_core_t *gnb_core, gnb_address_t *address, void *udata, size_t udata_size) {
     struct sockaddr_in  in;
     struct sockaddr_in6 in6;
     if ( 0 == address->port ) {
@@ -325,7 +320,7 @@ void gnb_send_udata_to_address(gnb_core_t *gnb_core, gnb_address_t *address, voi
     }
 }
 
-void gnb_send_address_list(gnb_core_t *gnb_core, gnb_address_list_t *address_list, gnb_payload16_t *payload){
+void gnb_send_address_list(gnb_core_t *gnb_core, gnb_address_list_t *address_list, gnb_payload16_t *payload) {
     int i;
     for ( i=0; i<address_list->num; i++ ) {
          gnb_send_to_address(gnb_core, &address_list->array[i], payload);
@@ -342,14 +337,14 @@ void gnb_send_available_address_list(gnb_core_t *gnb_core, gnb_address_list_t *a
     }
 }
 
-void gnb_send_address_list_through_all_sockets(gnb_core_t *gnb_core, gnb_address_list_t *address_list, gnb_payload16_t *payload, uint32_t interval_usec){
+void gnb_send_address_list_through_all_sockets(gnb_core_t *gnb_core, gnb_address_list_t *address_list, gnb_payload16_t *payload, uint32_t interval_usec) {
     int i;
     for ( i=0; i<address_list->num; i++ ) {
          gnb_send_to_address_through_all_sockets(gnb_core, &address_list->array[i], payload, interval_usec);
     }
 }
 
-void gnb_send_to_address_through_all_sockets(gnb_core_t *gnb_core, gnb_address_t *address, gnb_payload16_t *payload, uint32_t interval_usec){
+void gnb_send_to_address_through_all_sockets(gnb_core_t *gnb_core, gnb_address_t *address, gnb_payload16_t *payload, uint32_t interval_usec) {
     struct sockaddr_in  in;
     struct sockaddr_in6 in6;
     if ( 0 == address->port ) {
@@ -602,7 +597,7 @@ finish:
 #define GNB_SEND_BY_P2P_IPV4 (0x2)
 #define GNB_SEND_BY_FWD_IPV6 (0x3)
 #define GNB_SEND_BY_FWD_IPV4 (0x4)
-void gnb_std_uf_forward_payload_to_node(gnb_core_t *gnb_core, gnb_node_t *node, gnb_payload16_t *payload){
+void gnb_std_uf_forward_payload_to_node(gnb_core_t *gnb_core, gnb_node_t *node, gnb_payload16_t *payload) {
     int ret;
     int send_flag = GNB_SEND_BY_UNSET;
     gnb_node_t *fwd_node;

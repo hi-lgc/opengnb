@@ -90,19 +90,6 @@ char get_netmask_class(uint32_t addr4){
     return 'n';
 }
 
-gnb_address_list_t* gnb_create_address_list(size_t size) {
-    gnb_address_list_t *address_list;
-    address_list = (gnb_address_list_t *)malloc( sizeof(gnb_address_list_t) + sizeof(gnb_address_t)*size );
-    memset(address_list, 0, sizeof(gnb_address_list_t) + sizeof(gnb_address_t)*size);
-    address_list->size = size;
-    address_list->num = 0;
-    return address_list;
-}
-
-void gnb_address_list_release(gnb_address_list_t *address_list) {
-    free(address_list);
-}
-
 int gnb_address_list_find(gnb_address_list_t *address_list, gnb_address_t *address) {
     int i;
     for ( i=0; i < address_list->num; i++ ) {
@@ -158,20 +145,19 @@ finish:
     memcpy( &address_list->array[idx], address, sizeof(gnb_address_t) );
 }
 
-
-void gnb_set_address4(gnb_address_t *address, struct sockaddr_in *in) {
+void gnb_address4_set(gnb_address_t *address, struct sockaddr_in *in) {
     address->type = AF_INET;
     address->port = in->sin_port;
     memcpy(&address->address.addr4, &in->sin_addr.s_addr ,sizeof(struct in_addr));
 }
 
-void gnb_set_address6(gnb_address_t *address, struct sockaddr_in6 *in6) {
+void gnb_address6_set(gnb_address_t *address, struct sockaddr_in6 *in6) {
     address->type = AF_INET6;
     address->port = in6->sin6_port;
     memcpy(&address->address.addr6, &in6->sin6_addr ,sizeof(struct in6_addr));
 }
 
-char * gnb_get_address4string(void *byte4, char *dest, uint8_t addr_secure) {
+char * gnb_in4_addr_str(void *byte4, char *dest, uint8_t addr_secure) {
     inet_ntop(AF_INET, byte4, dest, INET_ADDRSTRLEN);
     char *p;
     if (addr_secure) {
@@ -187,7 +173,7 @@ char * gnb_get_address4string(void *byte4, char *dest, uint8_t addr_secure) {
     return dest;
 }
 
-char * gnb_get_address6string(void *byte16, char *dest, uint8_t addr_secure) {
+char * gnb_in6_addr_str(void *byte16, char *dest, uint8_t addr_secure) {
     inet_ntop(AF_INET6, byte16, dest, INET6_ADDRSTRLEN);
     char *p;
     if (addr_secure) {
@@ -203,10 +189,28 @@ char * gnb_get_address6string(void *byte16, char *dest, uint8_t addr_secure) {
     return dest;
 }
 
-char * gnb_get_socket4string(struct sockaddr_in *in, char *dest, uint8_t addr_secure) {
+char * gnb_sockaddr_in6_str(struct sockaddr_in6 *in6, char *dest, uint8_t addr_secure) {
+    char buf[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &in6->sin6_addr, buf, INET6_ADDRSTRLEN);
+    snprintf(dest, GNB_IP6_PORT_STRING_SIZE,"%s",buf);
+    char *p;
+    if ( addr_secure ) {
+        p = dest+1;
+        while ( '\0' != *p ) {
+            if ( ':' == *p ) {
+                break;
+            }
+            *p = '*';
+            p++;
+        }
+    }
+    return dest;
+}
+
+char * gnb_sockaddr_in4_str(struct sockaddr_in *in, char *dest, uint8_t addr_secure) {
     char buf[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &in->sin_addr, buf, INET_ADDRSTRLEN);
-    snprintf(dest, GNB_IP4_PORT_STRING_SIZE,"%s:%d",buf,ntohs(in->sin_port));
+    snprintf(dest, GNB_IP4_PORT_STRING_SIZE,"%s",buf);
     char *p;
     if (addr_secure) {
         p = dest;
@@ -221,7 +225,8 @@ char * gnb_get_socket4string(struct sockaddr_in *in, char *dest, uint8_t addr_se
     return dest;
 }
 
-char * gnb_get_socket6string(struct sockaddr_in6 *in6, char *dest, uint8_t addr_secure) {
+
+char * gnb_sockaddr_in6_port_str(struct sockaddr_in6 *in6, char *dest, uint8_t addr_secure) {
     char buf[INET6_ADDRSTRLEN];
     inet_ntop(AF_INET6, &in6->sin6_addr, buf, INET6_ADDRSTRLEN);
     snprintf(dest, GNB_IP6_PORT_STRING_SIZE,"[%s:%d]",buf,ntohs(in6->sin6_port));
@@ -239,16 +244,35 @@ char * gnb_get_socket6string(struct sockaddr_in6 *in6, char *dest, uint8_t addr_
     return dest;
 }
 
-char * gnb_get_sockaddress_string(gnb_sockaddress_t *sockaddress, char *dest, uint8_t addr_secure) {
-    if ( AF_INET6 == sockaddress->addr_type ) {
-        dest = gnb_get_socket6string(&sockaddress->addr.in6,dest,addr_secure);
-    } else if ( AF_INET == sockaddress->addr_type ) {
-        dest = gnb_get_socket4string(&sockaddress->addr.in,dest,addr_secure);
+char * gnb_sockaddr_in4_port_str(struct sockaddr_in *in, char *dest, uint8_t addr_secure) {
+    char buf[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &in->sin_addr, buf, INET_ADDRSTRLEN);
+    snprintf(dest, GNB_IP4_PORT_STRING_SIZE,"%s:%d",buf,ntohs(in->sin_port));
+    char *p;
+    if (addr_secure) {
+        p = dest;
+        while ( '\0' != *p ) {
+            if ( '.' == *p ) {
+                break;
+            }
+            *p = '*';
+            p++;
+        }
     }
     return dest;
 }
 
-char * gnb_get_ip_port_string(gnb_address_t *address, char *dest, uint8_t addr_secure) {
+char * gnb_sockaddress_port_str(gnb_sockaddress_t *sockaddress, char *dest, uint8_t addr_secure) {
+    if ( AF_INET6 == sockaddress->addr_type ) {
+        dest = gnb_sockaddr_in6_port_str(&sockaddress->addr.in6,dest,addr_secure);
+    } else if ( AF_INET == sockaddress->addr_type ) {
+        dest = gnb_sockaddr_in4_port_str(&sockaddress->addr.in,dest,addr_secure);
+    }
+    return dest;
+}
+
+
+char * gnb_address_port_str(gnb_address_t *address, char *dest, uint8_t addr_secure) {
     char buf[INET6_ADDRSTRLEN];
     char *p;
     p = dest;
@@ -294,7 +318,7 @@ int gnb_cmp_sockaddr_in(struct sockaddr_in *in1, struct sockaddr_in *in2) {
     return 0;
 }
 
-void gnb_set_sockaddress4(gnb_sockaddress_t *sockaddress, int protocol, const char *host, int port){
+void gnb_sockaddress4_set(gnb_sockaddress_t *sockaddress, int protocol, const char *host, int port){
     sockaddress->addr_type = AF_INET;
     if ( GNB_PROTOCOL_TCP == protocol ) {
         sockaddress->protocol = SOCK_STREAM;
@@ -314,7 +338,7 @@ void gnb_set_sockaddress4(gnb_sockaddress_t *sockaddress, int protocol, const ch
     sockaddress->socklen = sizeof(struct sockaddr_in);
 }
 
-void gnb_set_sockaddress6(gnb_sockaddress_t *sockaddress, int protocol, const char *host, int port) {
+void gnb_sockaddress6_set(gnb_sockaddress_t *sockaddress, int protocol, const char *host, int port) {
     sockaddress->addr_type = AF_INET6;
     if ( GNB_PROTOCOL_TCP == protocol ) {
         sockaddress->protocol = SOCK_STREAM;
@@ -332,47 +356,6 @@ void gnb_set_sockaddress6(gnb_sockaddress_t *sockaddress, int protocol, const ch
     }
     sockaddress->m_in6.sin6_port = htons(port);
     sockaddress->socklen = sizeof(struct sockaddr_in6);
-}
-
-gnb_address_t gnb_get_address4_from_string(const char *sockaddress4_string) {
-    gnb_address_t address;
-    memset(&address,0,sizeof(gnb_address_t));
-    unsigned long int ul;
-    char sockaddress4_string_copy[16];
-    int sockaddress4_string_len = strlen(sockaddress4_string);
-    memcpy(sockaddress4_string_copy, sockaddress4_string, sockaddress4_string_len);
-    int i;
-    char *p = sockaddress4_string_copy;
-    for ( i=0; i<sockaddress4_string_len; i++) {
-        if ( ':' == *p ) {
-            *p = '\0';
-            break;
-        }
-        p++;
-    }
-    p++;
-    ul = strtoul(p, NULL, 10);
-    if ( ULONG_MAX == ul ) {
-        return address;
-    }
-    inet_pton(AF_INET, sockaddress4_string_copy, &address.address.addr4);
-    uint16_t port = (uint16_t)ul;
-    address.port = htons(port);
-    address.type = AF_INET;
-    return address;
-}
-
-char* gnb_hide_adrress_string(char*adrress_string){
-    char *p;
-    p = adrress_string;
-    while ( '\0' != *p ) {
-        if ( '.' == *p || ':' == *p ) {
-            break;
-        }
-        *p = '*';
-        p++;
-    }
-    return adrress_string;
 }
 
 void gnb_address_list3_fifo(gnb_address_list_t *address_list, gnb_address_t *address) {
@@ -440,4 +423,33 @@ int gnb_determine_subnet4(struct in_addr addr4_a, struct in_addr addr4_b, struct
         return 1;
     }
     return 0;
+}
+
+//unuse
+gnb_address_t gnb_get_address4_from_string(const char *sockaddress4_string) {
+    gnb_address_t address;
+    memset(&address,0,sizeof(gnb_address_t));
+    unsigned long int ul;
+    char sockaddress4_string_copy[16];
+    int sockaddress4_string_len = strlen(sockaddress4_string);
+    memcpy(sockaddress4_string_copy, sockaddress4_string, sockaddress4_string_len);
+    int i;
+    char *p = sockaddress4_string_copy;
+    for ( i=0; i<sockaddress4_string_len; i++) {
+        if ( ':' == *p ) {
+            *p = '\0';
+            break;
+        }
+        p++;
+    }
+    p++;
+    ul = strtoul(p, NULL, 10);
+    if ( ULONG_MAX == ul ) {
+        return address;
+    }
+    inet_pton(AF_INET, sockaddress4_string_copy, &address.address.addr4);
+    uint16_t port = (uint16_t)ul;
+    address.port = htons(port);
+    address.type = AF_INET;
+    return address;
 }

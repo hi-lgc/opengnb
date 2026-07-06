@@ -72,12 +72,15 @@ static void self_test() {
     gnb_node_t *node;
     int ret;
     char es_arg_string[GNB_ARG_STRING_MAX_SIZE];
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST daemon='%d'\n", gnb_core->conf->daemon );
     GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST systemd_daemon='%d'\n", gnb_core->conf->systemd_daemon );
 
     if ( 1 == gnb_core->conf->activate_tun && 0 == gnb_core->conf->public_index_service ) {
         GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST local node=%lu\n", gnb_core->local_node->uuid64);
-        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun ipv4[%s]\n",   GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4));
+        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun ipv4[%s]\n",
+                 gnb_in4_addr_str(&gnb_core->local_node->tun_addr4,address_string1,0)
+        );
     }
 
     GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST binary_dir='%s'\n", gnb_core->conf->binary_dir);
@@ -204,21 +207,25 @@ static void self_test() {
             } else {
                 GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST local  node %llu\n", node->uuid64);
             }
-            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun_ipv6 %s\n", GNB_ADDR6STR_PLAINTEXT1(&node->tun_ipv6_addr));
-            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun_ipv4 %s\n", GNB_ADDR4STR_PLAINTEXT1(&node->tun_addr4));
+            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun_ipv6 %s\n", gnb_in6_addr_str(&node->tun_ipv6_addr,address_string1,0));
+            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST tun_ipv4 %s\n", gnb_in4_addr_str(&node->tun_addr4,address_string1,0));
             static_address_list  = (gnb_address_list_t *)&node->static_address_block;
             for ( j=0; j<static_address_list->num; j++ ) {
                 gnb_address = &static_address_list->array[j];
                 if ( 0 == gnb_address->port ) {
                     continue;
                 }
-                GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"SELF-TEST address %s\n", GNB_IP_PORT_STR1(gnb_address));
+                GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"SELF-TEST address %s\n",
+                        gnb_address_port_str(gnb_address,address_string1,gnb_core->conf->addr_secure)
+                );
             }
         }
 
         GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST num of index=%d\n", gnb_core->index_address_ring.address_list->num);
         for ( i=0; i< gnb_core->index_address_ring.address_list->num; i++ ) {
-            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST index node '%s'\n", GNB_IP_PORT_STR1(&gnb_core->index_address_ring.address_list->array[i]));
+            GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "SELF-TEST index node '%s'\n",
+                     gnb_address_port_str(&gnb_core->index_address_ring.address_list->array[i],address_string1,gnb_core->conf->addr_secure)
+            );
         }
         GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"SELF-TEST num of fwd node:%d\n", gnb_core->fwd_node_ring.num);
         for ( i=0; i<gnb_core->fwd_node_ring.num; i++ ) {
@@ -262,13 +269,13 @@ void show_description() {
     printf("%s\n", GNB_VERSION_STRING);
     printf("%s\n", GNB_COPYRIGHT_STRING);
     printf("Site: %s\n", GNB_URL_STRING);
-	#if defined(GNB_OPENWRT_BUILD)
-	printf("%s\n","Note:charleschan<hollidgelongsun157@gmail.com>(https://github.com/orgs/opengnb/people/charleschan2006-alias) made great efforts for OpenGNB porting to OpenWRT platform and provides technical supoort.");
-	#endif
+    #if defined(GNB_OPENWRT_BUILD)
+    printf("%s\n","Note:charleschan<hollidgelongsun157@gmail.com>(https://github.com/orgs/opengnb/people/charleschan2006-alias) made great efforts for OpenGNB porting to OpenWRT platform and provides technical supoort.");
+    #endif
 
-	#ifdef _WIN32
-	printf("%s\n","Note:wuqiong(https://www.github.com/wuqiong) made great efforts for OpenGNB supoort wintun Driver and provides technical supoort.");
-	#endif
+    #ifdef _WIN32
+    printf("%s\n","Note:wuqiong(https://www.github.com/wuqiong) made great efforts for OpenGNB supoort wintun Driver and provides technical supoort.");
+    #endif
 
     int idx = 0;
     printf("registered packet filter:");
@@ -332,7 +339,7 @@ int main (int argc,char *argv[]) {
         self_test();
     }
 
-	if ( 0 == gnb_core->conf->public_index_service ) {
+    if ( 0 == gnb_core->conf->public_index_service ) {
         gnb_core_start(gnb_core);
     } else {
         gnb_core_index_service_start(gnb_core);

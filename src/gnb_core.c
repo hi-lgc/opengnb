@@ -55,11 +55,12 @@ extern int is_trace;
 
 static void gnb_setup_env(gnb_core_t *gnb_core) {
     char env_value_string[64];
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     gnb_set_env("GNB_IF_NAME", gnb_core->ifname);
     snprintf(env_value_string, 64, "%d", gnb_core->conf->mtu);
     gnb_set_env("GNB_MTU", env_value_string);
-    gnb_set_env("GNB_TUN_IPV4", GNB_ADDR4STR1(&gnb_core->local_node->tun_addr4));
-    gnb_set_env("GNB_TUN_IPV6", GNB_ADDR6STR1(&gnb_core->local_node->tun_ipv6_addr));
+    gnb_set_env("GNB_TUN_IPV6", gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr,address_string1,gnb_core->conf->addr_secure));
+    gnb_set_env("GNB_TUN_IPV4", gnb_in6_addr_str(&gnb_core->local_node->tun_addr4,address_string1,gnb_core->conf->addr_secure));
 }
 
 static void init_ctl_block(gnb_core_t *gnb_core, gnb_conf_t *conf) {
@@ -80,7 +81,7 @@ static void init_ctl_block(gnb_core_t *gnb_core, gnb_conf_t *conf) {
         node_num = 256;
     }
 
-	/*
+    /*
     (1 + conf->pf_worker_num) 是为  gnb_ctl_core_zone_t 中的 pf_worker_payload_blocks 预留 share memory 空间中 (primary_worker + pf_worker) 个 memmory block
     primary_worker 所使用的是 pf_worker_payload_blocks 第1块,后面的块由 pf_worker 依次占用 
     sizeof(gnb_block32_t) * 5 是 share memory 中ctl_block 有5个 zone 的 gnb_block32_t 结构占用的空间
@@ -383,13 +384,13 @@ gnb_core_t* gnb_core_create(gnb_conf_t *conf) {
     gnb_core->fwdu0_address_ring.address_list->size = 16;
     gnb_core->ifname = (char *)gnb_core->ctl_block->core_zone->ifname;
     gnb_core->if_device_string = (char *)gnb_core->ctl_block->core_zone->if_device_string;
-    gnb_core->uuid_node_map   = gnb_hash32_create(gnb_core->heap, 1024, 1024); //以节点的uuid64作为key的 node 表
-    gnb_core->ipv4_node_map   = gnb_hash32_create(gnb_core->heap, 1024, 1024);
+    gnb_core->uuid_node_map   = gnb_hash32_create(gnb_core->heap, 1024); //以节点的uuid64作为key的 node 表
+    gnb_core->ipv4_node_map   = gnb_hash32_create(gnb_core->heap, 1024);
 
-	//以节点的subnet(uint32)作为key的 node ring 表
-	gnb_core->subneta_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024, 1024);
-    gnb_core->subnetb_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024, 1024);
-    gnb_core->subnetc_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024, 1024);
+    //以节点的subnet(uint32)作为key的 node ring 表
+    gnb_core->subneta_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024);
+    gnb_core->subnetb_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024);
+    gnb_core->subnetc_node_ring_map = gnb_hash32_create(gnb_core->heap, 1024);
 
     int64_t now_sec = gnb_timestamp_sec();
     gnb_update_time_seed(gnb_core, now_sec);
@@ -580,11 +581,37 @@ gnb_core_t* gnb_core_index_service_create(gnb_conf_t *conf) {
 }
 
 void gnb_core_release(gnb_core_t *gnb_core) {
+    int i;
     //gnb_core 结构体内还有一些成员内存没做释放处理
+    gnb_core->primary_worker->release(gnb_core->primary_worker);
     if ( gnb_core->conf->public_index_service ) {
         goto PUBLIC_INDEX_RELEASE;
     }
+    if ( gnb_core->conf->activate_tun ) {
+        for ( i=0; i<gnb_core->pf_worker_ring->size; i++ ) {
+            //在释放 pf_worker_ring 同时时也包括了释放其中的 pf_core
+            gnb_core->pf_worker_ring->worker[i]->release(gnb_core->pf_worker_ring->worker[i]);
+        }
+        gnb_core->drv->release_tun(gnb_core);
+    }
+    if ( gnb_core->conf->activate_index_worker ) {
+        gnb_core->index_worker->release(gnb_core->index_worker);
+    }
+    if ( gnb_core->conf->activate_detect_worker ) {
+        gnb_core->detect_worker->release(gnb_core->detect_worker);
+    }
+    if ( gnb_core->conf->activate_index_service_worker ) {
+        gnb_core->index_service_worker->release(gnb_core->index_service_worker);
+    }
+    if ( gnb_core->conf->activate_node_worker ) {
+        gnb_core->node_worker->release(gnb_core->node_worker);
+    }
 PUBLIC_INDEX_RELEASE:
+    if ( gnb_core->conf->activate_index_service_worker ) {
+        gnb_core->index_service_worker->release(gnb_core->index_service_worker);
+    }
+    //mmap_block 在 init_ctl_block 里创建
+    gnb_mmap_release(gnb_core->ctl_block->mmap_block);
     gnb_heap_free(gnb_core->heap ,gnb_core);
 }
 
@@ -600,6 +627,7 @@ void gnb_core_index_service_start(gnb_core_t *gnb_core) {
 void gnb_core_start(gnb_core_t *gnb_core) {
     int ret;
     int i;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "Start.....\n");
     gnb_setup_env(gnb_core);
     update_node_crypto_key(gnb_core, 1);
@@ -614,7 +642,10 @@ void gnb_core_start(gnb_core_t *gnb_core) {
             return;
         }
         GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"if[%s] opened\n", gnb_core->ifname);
-        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"node[%llu] ipv4[%s]\n", gnb_core->local_node->uuid64, GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4));
+        GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE,"node[%llu] ipv4[%s]\n",
+                 gnb_core->local_node->uuid64,
+                 gnb_in4_addr_str(&gnb_core->local_node->tun_addr4, address_string1,0)
+        );
         for ( i=0; i<gnb_core->pf_worker_ring->size; i++ ) {
             gnb_core->pf_worker_ring->worker[i]->start(gnb_core->pf_worker_ring->worker[i]);
             GNB_LOG1(gnb_core->log, GNB_LOG_ID_CORE, "start packet filter worker [%s]\n", gnb_core->pf_worker_ring->worker[i]->name);

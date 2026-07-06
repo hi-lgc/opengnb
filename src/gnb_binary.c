@@ -113,7 +113,6 @@ void *gnb_hex2bin(char *hex_string, void *bin, size_t bin_size) {
 }
 
 char * gnb_get_hex_string8(void *byte4,char *dest) {
-    gnb_hex_string8_t hex_string8;
     gnb_bin2hex(byte4, 4, dest);
     dest[8] = '\0';
     return dest;

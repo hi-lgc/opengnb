@@ -40,53 +40,53 @@ static void gnb_lru32_node_fixed_pool_push(gnb_lru32_t *lru, gnb_lru32_node_t *l
 
 gnb_lru32_t *gnb_lru32_create(gnb_heap_t *heap, uint32_t max_size,uint32_t block_size) {
     gnb_lru32_t *lru = (gnb_lru32_t *)gnb_heap_alloc(heap,sizeof(gnb_lru32_t));
-	memset(lru, 0, sizeof(gnb_lru32_t));
+    memset(lru, 0, sizeof(gnb_lru32_t));
     lru->heap = heap;
     lru->max_size = max_size;
     lru->size = 0;
     lru->block_size = block_size;
-    lru->lru_node_map = gnb_hash32_create(heap,max_size,max_size);
+    lru->lru_node_map = gnb_hash32_create(heap,max_size);
     if ( NULL==lru->lru_node_map ) {
         goto finish_error;
     }
     lru->doubly_linked_list = gnb_doubly_linked_list_create(lru->heap);
-	if ( NULL ==lru->doubly_linked_list ) {
-		goto finish_error;
-	}
+    if ( NULL ==lru->doubly_linked_list ) {
+        goto finish_error;
+    }
     if ( 0 != lru->block_size ) {
         lru->udata_fixed_pool = gnb_fixed_pool_create(heap,max_size, lru->block_size);
-		if ( NULL==lru->udata_fixed_pool ) {
-			goto finish_error;	
-		}
+        if ( NULL==lru->udata_fixed_pool ) {
+            goto finish_error;    
+        }
     }
     lru->dl_node_fixed_pool  = gnb_fixed_pool_create(heap,max_size, sizeof(gnb_doubly_linked_list_node_t));
-	if ( NULL == lru->dl_node_fixed_pool) {
-		goto finish_error;
-	}
+    if ( NULL == lru->dl_node_fixed_pool) {
+        goto finish_error;
+    }
     lru->lru_node_fixed_pool = gnb_fixed_pool_create(heap,max_size, sizeof(gnb_lru32_node_t));
-	if ( NULL == lru->lru_node_fixed_pool ) {
-		goto finish_error;
-	}
+    if ( NULL == lru->lru_node_fixed_pool ) {
+        goto finish_error;
+    }
     return lru;
 
 finish_error:
-	if ( NULL != lru->lru_node_map ) {
-		gnb_heap_free(heap, lru->lru_node_map);
-	}
-	if ( NULL != lru->doubly_linked_list ) {
-		gnb_heap_free(heap, lru->doubly_linked_list);
-	}
-	if ( NULL != lru->udata_fixed_pool ) {
-		gnb_heap_free(heap, lru->udata_fixed_pool);
-	}
-	if ( NULL != lru->dl_node_fixed_pool ) {
-		gnb_heap_free(heap, lru->dl_node_fixed_pool);
-	}
-	if ( NULL != lru->lru_node_fixed_pool ) {
-		gnb_heap_free(heap, lru->lru_node_fixed_pool); 
-	}
-	gnb_heap_free(heap,lru);
-	return NULL;
+    if ( NULL != lru->lru_node_map ) {
+        gnb_heap_free(heap, lru->lru_node_map);
+    }
+    if ( NULL != lru->doubly_linked_list ) {
+        gnb_heap_free(heap, lru->doubly_linked_list);
+    }
+    if ( NULL != lru->udata_fixed_pool ) {
+        gnb_heap_free(heap, lru->udata_fixed_pool);
+    }
+    if ( NULL != lru->dl_node_fixed_pool ) {
+        gnb_heap_free(heap, lru->dl_node_fixed_pool);
+    }
+    if ( NULL != lru->lru_node_fixed_pool ) {
+        gnb_heap_free(heap, lru->lru_node_fixed_pool); 
+    }
+    gnb_heap_free(heap,lru);
+    return NULL;
 }
 
 void gnb_lru32_release(gnb_lru32_t *lru) {

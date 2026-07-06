@@ -82,15 +82,12 @@ typedef struct _primary_worker_ctx_t{
 }primary_worker_ctx_t;
 
 #pragma pack(push, 1)
-
 typedef struct _gnb_ur0_frame_head_t {
     uint8_t  dst_addr4[4];
     uint16_t dst_port4;
     unsigned char passcode[4];
 } __attribute__ ((__packed__)) gnb_ur0_frame_head_t;
-
 #pragma pack(pop)
-
 
 gnb_worker_t * select_pf_worker(gnb_core_t *gnb_core){
     gnb_worker_t *pf_worker = NULL;
@@ -107,6 +104,8 @@ void gnb_send_ur0_frame(gnb_core_t *gnb_core, gnb_node_t *dst_node, gnb_payload1
     gnb_payload16_t *fwd_payload = (gnb_payload16_t *)buffer;
     gnb_address_t *dst_address = gnb_select_available_address4(gnb_core, dst_node);
     gnb_address_t node_address_st;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     if( NULL == dst_address ) {
         if ( 0 != dst_node->udp_sockaddr4.sin_port ) {
             node_address_st.type = AF_INET;
@@ -129,26 +128,37 @@ void gnb_send_ur0_frame(gnb_core_t *gnb_core, gnb_node_t *dst_node, gnb_payload1
     gnb_payload16_set_data_len(fwd_payload, sizeof(gnb_ur0_frame_head_t) + payload_size);
     gnb_send_to_address(gnb_core, fwd_address, fwd_payload);
     if ( 1==gnb_core->conf->if_dump ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "send ur0 local =>[%s]=>dst_addr[%s:%d]\n", GNB_IP_PORT_STR1(fwd_address), GNB_ADDR4STR2(ur0_frame_head->dst_addr4), ntohs(ur0_frame_head->dst_port4));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "send ur0 local =>[%s]=>dst_addr[%s:%d]\n",
+                 gnb_address_port_str(fwd_address,address_string1,gnb_core->conf->addr_secure),
+                 gnb_in4_addr_str(ur0_frame_head->dst_addr4,address_string2,gnb_core->conf->addr_secure),
+                 ntohs(ur0_frame_head->dst_port4)
+        );
     }
 }
 
 static void handle_ur0_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb_sockaddress_t *source_node_addr) {
     gnb_ur0_frame_head_t *ur0_frame_head = (gnb_ur0_frame_head_t *)payload->data;
     gnb_address_t dst_address_st;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     dst_address_st.type = AF_INET;
     memcpy(&dst_address_st.address.addr4, ur0_frame_head->dst_addr4, 4);
     dst_address_st.port = ur0_frame_head->dst_port4;
     if ( 0 != memcmp(ur0_frame_head->passcode, gnb_core->conf->crypto_passcode, 4) ) {
         if ( 1==gnb_core->conf->if_dump ) {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "handle ur0 =>[%s] passcode invalid\n", GNB_IP_PORT_STR1(&dst_address_st) );
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "handle ur0 =>[%s] passcode invalid\n",
+                     gnb_address_port_str(&dst_address_st,address_string1,gnb_core->conf->addr_secure)
+            );
         }
         return;
     }
     gnb_payload16_t *fwd_payload = (gnb_payload16_t *)(payload->data + sizeof(gnb_ur0_frame_head_t));
     gnb_send_to_address(gnb_core, &dst_address_st, fwd_payload);
     if ( 1==gnb_core->conf->if_dump ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "handle ur0 %s => %s\n", GNB_SOCKETADDRSTR1(source_node_addr), GNB_IP_PORT_STR1(&dst_address_st) );
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "handle ur0 %s => %s\n",
+                 gnb_sockaddress_port_str(source_node_addr,address_string1,gnb_core->conf->addr_secure),
+                 gnb_address_port_str(&dst_address_st,address_string2,gnb_core->conf->addr_secure)
+        );
     }
 }
 
@@ -162,6 +172,8 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
     unsigned char *ur1_data;
     uint16_t ur1_data_size;
     unsigned char verifycode[4];
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     #define GNB_UR1_SOURCE_UNSET  0
     //payload来自 App
     #define GNB_UR1_SOURCE_APP    1
@@ -170,26 +182,38 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
     int ur1_source = GNB_UR1_SOURCE_UNSET;
     data_size = GNB_PAYLOAD16_DATA_SIZE(payload);
     if ( data_size <= sizeof(gnb_ur1_frame_head_t) ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload size error!\n", GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload size error!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     gnb_ur1_frame_head_t *ur1_frame_head = (gnb_ur1_frame_head_t *)payload->data;
     if ( ur1_frame_head->ttl > 2 ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload ttl=%d error!\n", ur1_frame_head->ttl, GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload ttl=%d error!\n", ur1_frame_head->ttl,
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     if ( 0 != memcmp(ur1_frame_head->passcode, gnb_core->conf->crypto_passcode, 4) ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload passcode error!\n", GNB_SOCKETADDRSTR1(node_addr));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload passcode error!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+        );
         return;
     }
     dst_uuid64 = gnb_ntohll(ur1_frame_head->dst_uuid64);
     if ( 0==dst_uuid64 ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload dst_node=%llu error!\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64);
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload dst_node=%llu error!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 dst_uuid64
+        );
         return;
     }
     dst_node = (gnb_node_t *)GNB_HASH32_UINT64_GET_PTR(gnb_core->uuid_node_map, dst_uuid64);
     if ( NULL==dst_node ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload dst_node=%llu not found!\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64);
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload dst_node=%llu not found!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 dst_uuid64
+        );
         return;
     }
     // 0==src_uuid64 说明 payload 来自应用端, 需要为 payload 设置 src_uuid64,src_addr,ttl
@@ -201,15 +225,28 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
             payload->sub_type &= ~(GNB_PAYLOAD_SUB_TYPE_UR1_SRC_ADDRESS4);
             memcpy(ur1_frame_head->src_addr, &node_addr->addr.in6.sin6_addr, 16);
             ur1_frame_head->src_port = node_addr->addr.in6.sin6_port;
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu src_uuid64=0 set src_addr=%s:%d\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64, GNB_ADDR6STR2(ur1_frame_head->src_addr), ntohs(ur1_frame_head->src_port));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu src_uuid64=0 set src_addr=%s:%d\n",
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                     dst_uuid64,
+                     gnb_in6_addr_str(ur1_frame_head->src_addr,address_string2,gnb_core->conf->addr_secure),
+                     ntohs(ur1_frame_head->src_port)
+            );
         } else if ( AF_INET == node_addr->addr_type ) {
             //IPV4:bit=1
             payload->sub_type |= GNB_PAYLOAD_SUB_TYPE_UR1_SRC_ADDRESS4;
             memcpy(ur1_frame_head->src_addr, &node_addr->addr.in.sin_addr, 4);
             ur1_frame_head->src_port = node_addr->addr.in.sin_port;
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu src_uuid64=0 set src_addr=%s:%d\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64, GNB_ADDR4STR2(ur1_frame_head->src_addr), ntohs(ur1_frame_head->src_port));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu src_uuid64=0 set src_addr=%s:%d\n",
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                     dst_uuid64,
+                     gnb_in4_addr_str(ur1_frame_head->src_addr,address_string2,gnb_core->conf->addr_secure),
+                     ntohs(ur1_frame_head->src_port)
+            );
         } else {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu in addr_type error\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64);
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s dst_node=%llu in addr_type error\n",
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                     dst_uuid64
+            );
             return;
         }
         ur1_source = GNB_UR1_SOURCE_APP;
@@ -222,7 +259,10 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
     src_uuid64 = gnb_ntohll(ur1_frame_head->src_uuid64);
     src_node = (gnb_node_t *)GNB_HASH32_UINT64_GET_PTR(gnb_core->uuid_node_map, src_uuid64);
     if ( NULL==src_node ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload src_node=%llu not found!\n", GNB_SOCKETADDRSTR1(node_addr), src_uuid64);
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload src_node=%llu not found!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 src_uuid64
+        );
         return;
     }
     ur1_data = payload->data + sizeof(gnb_ur1_frame_head_t);
@@ -235,13 +275,24 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
             //IPV6
             ur1_address_st.type = AF_INET6;
             memcpy(&ur1_address_st.m_address6, ur1_frame_head->dst_addr, 16);
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s src_uuid=%llu dst_node=%llu payload to host dst=%s:%d\n", GNB_SOCKETADDRSTR1(node_addr), gnb_ntohll(ur1_frame_head->src_uuid64), dst_uuid64, GNB_ADDR6STR2(&ur1_address_st.m_address6), ntohs(ur1_address_st.port));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s src_uuid=%llu dst_node=%llu payload to host dst=%s:%d\n",
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                     gnb_ntohll(ur1_frame_head->src_uuid64),
+                     dst_uuid64,
+                     gnb_in6_addr_str(&ur1_address_st.m_address6,address_string2,gnb_core->conf->addr_secure),
+                     ntohs(ur1_address_st.port)
+            );
         } else  {
             //IPV4
             ur1_address_st.type = AF_INET;
             memcpy(&ur1_address_st.m_address4, ur1_frame_head->dst_addr, 4);
-
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s src_uuid=%llu dst_node=%llu payload to host dst=%s:%d\n", GNB_SOCKETADDRSTR1(node_addr), gnb_ntohll(ur1_frame_head->src_uuid64), dst_uuid64, GNB_ADDR4STR2(&ur1_address_st.m_address4), ntohs(ur1_address_st.port));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s src_uuid=%llu dst_node=%llu payload to host dst=%s:%d\n",
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                     gnb_ntohll(ur1_frame_head->src_uuid64),
+                     dst_uuid64,
+                     gnb_in4_addr_str(&ur1_address_st.m_address4,address_string2,gnb_core->conf->addr_secure),
+                     ntohs(ur1_address_st.port)
+            );
         }
         if ( ur1_frame_head->src_uuid64 != ur1_frame_head->dst_uuid64) {
             //解密
@@ -251,7 +302,9 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
             verifycode[2] = ur1_data[ur1_data_size-2];
             verifycode[3] = ur1_data[ur1_data_size-1];
             if ( 0 != memcmp(ur1_frame_head->verifycode, verifycode, 4) ) {
-                GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload verifycode error by crypto_key!\n", GNB_SOCKETADDRSTR1(node_addr));
+                GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload verifycode error by crypto_key!\n",
+                         gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+                );
                 //尝试用旧通信密钥解密
                 xor_crypto(src_node->pre_crypto_key, (unsigned char *)ur1_data, ur1_data_size);
                 verifycode[0] = ur1_data[0];
@@ -259,7 +312,9 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
                 verifycode[2] = ur1_data[ur1_data_size-2];
                 verifycode[3] = ur1_data[ur1_data_size-1];
                 if ( 0 != memcmp(ur1_frame_head->verifycode, verifycode, 4) ) {
-                    GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload verifycode error by pre_crypto_key!\n", GNB_SOCKETADDRSTR1(node_addr));
+                    GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload verifycode error by pre_crypto_key!\n",
+                             gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+                    );
                     return;
                 }
             }
@@ -268,11 +323,15 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
         //payload 转发到指定 host and port 
         if ( payload->sub_type & GNB_PAYLOAD_SUB_TYPE_UR1_HEADER ) {
             gnb_send_to_address(gnb_core, &ur1_address_st, payload);
-            GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame payload relay to %s with frame header\n", GNB_IP_PORT_STR1(&ur1_address_st) );
+            GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame payload relay to %s with frame header\n",
+                     gnb_address_port_str(&ur1_address_st,address_string1,gnb_core->conf->addr_secure)
+            );
         } else {
             //skip frame header
             gnb_send_udata_to_address(gnb_core,&ur1_address_st, payload->data + sizeof(gnb_ur1_frame_head_t), data_size - sizeof(gnb_ur1_frame_head_t));
-            GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame payload relay to %s without frame header\n", GNB_IP_PORT_STR1(&ur1_address_st) );
+            GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame payload relay to %s without frame header\n",
+                     gnb_address_port_str(&ur1_address_st,address_string1,gnb_core->conf->addr_secure)
+            );
         }
         return;
     }
@@ -285,17 +344,33 @@ static void handle_ur1_frame(gnb_core_t *gnb_core, gnb_payload16_t *payload, gnb
         ur1_frame_head->verifycode[3] = ur1_data[ur1_data_size-1];
         xor_crypto(dst_node->crypto_key, ur1_data, ur1_data_size);
         gnb_std_uf_forward_payload_to_node(gnb_core, dst_node, payload);
-        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s to dst node=%llu payload\n", GNB_SOCKETADDRSTR1(node_addr), dst_uuid64);
+        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s to dst node=%llu payload\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 dst_uuid64
+        );
         return;
     } else if ( GNB_UR1_SOURCE_NODE == ur1_source && dst_uuid64 != gnb_core->local_node->uuid64 ) {
         if ( 0==ur1_frame_head->ttl ) {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload ttl=%d error!\n", ur1_frame_head->ttl, GNB_SOCKETADDRSTR1(node_addr));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_MAIN_WORKER, "UR1 frame frome %s payload ttl=%d error!\n",
+                     ur1_frame_head->ttl,
+                     gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure)
+            );
             return;
         }
         gnb_std_uf_forward_payload_to_node(gnb_core, dst_node, payload);
-        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame from %s src node=%d to dst node=%llu payload relay!\n", GNB_SOCKETADDRSTR1(node_addr), gnb_core->local_node->uuid64, dst_uuid64);
+        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame from %s src node=%d to dst node=%llu payload relay!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 gnb_core->local_node->uuid64,
+                 dst_uuid64
+        );
     } else {
-        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame from %s src node=%d to dst node=%llu ur1_source=%d, ttl==%d payload error!\n", GNB_SOCKETADDRSTR1(node_addr), gnb_core->local_node->uuid64, dst_uuid64, ur1_source, ur1_frame_head->ttl);
+        GNB_LOG3(gnb_core->log,GNB_LOG_ID_MAIN_WORKER, "UR1 frame from %s src node=%d to dst node=%llu ur1_source=%d, ttl==%d payload error!\n",
+                 gnb_sockaddress_port_str(node_addr,address_string1,gnb_core->conf->addr_secure),
+                 gnb_core->local_node->uuid64,
+                 dst_uuid64,
+                 ur1_source,
+                 ur1_frame_head->ttl
+        );
     }
 }
 
@@ -328,6 +403,7 @@ static void handle_udp(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core, uint8_t soc
     gnb_worker_t *pf_worker;
     gnb_worker_queue_data_t *receive_queue_data;
     gnb_payload16_t *inet_payload;
+    char gnb_hex256_str1[256+1];
     if ( !gnb_core->conf->activate_tun ) {
         inet_payload = gnb_core->inet_payload;
         goto skip_tun;
@@ -365,7 +441,9 @@ skip_tun:
         goto finish;
     }
     if ( 1 == gnb_core->conf->if_dump ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload INET in buffer[%s..]\n", GNB_HEX2_BYTE256((void *)inet_payload));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload INET in buffer[%s..]\n",
+                 gnb_get_hex_string256((void *)inet_payload,gnb_hex256_str1)
+        );
     }
     node_addr_st.protocol = SOCK_DGRAM;
     payload_size = gnb_payload16_size(inet_payload);
@@ -390,7 +468,7 @@ skip_tun:
         switch ( inet_payload->sub_type ) {
         case PAYLOAD_SUB_TYPE_POST_ADDR    :
         case PAYLOAD_SUB_TYPE_REQUEST_ADDR :
-				if ( 0 == gnb_core->conf->activate_index_service_worker ) {
+                if ( 0 == gnb_core->conf->activate_index_service_worker ) {
                     goto finish;
                 }
                 receive_queue_data = make_worker_receive_queue_data(gnb_core->index_service_worker, &node_addr_st, socket_idx, inet_payload);
@@ -455,13 +533,16 @@ static ssize_t handle_tun(gnb_core_t *gnb_core, gnb_pf_core_t *pf_core) {
     ssize_t rlen;
     gnb_worker_t *pf_worker;
     gnb_worker_queue_data_t *send_queue_data;
+    char gnb_hex256_str1[256+1];
     //tun模式下这里得到的payload是ip分组, tap模式下是以太网分组,现在都是tun模式
     rlen = gnb_core->drv->read_tun(gnb_core, gnb_core->tun_payload->data + gnb_core->tun_payload_offset, gnb_core->conf->payload_block_size);
     if ( rlen<=0 ) {
         goto finish;
     }
     if ( 1 == gnb_core->conf->if_dump ) {
-        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload TUN out buffer[%s..]\n", GNB_HEX2_BYTE128((void *)(gnb_core->tun_payload->data + gnb_core->tun_payload_offset)));
+        GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload TUN out buffer[%s..]\n",
+                 gnb_get_hex_string128((void *)(gnb_core->tun_payload->data + gnb_core->tun_payload_offset),gnb_hex256_str1)
+        );
     }
     gnb_payload16_set_size(gnb_core->tun_payload, GNB_PAYLOAD16_HEAD_SIZE + gnb_core->tun_payload_offset + rlen);
     if ( gnb_core->pf_worker_ring->size == 0 ) {
@@ -488,6 +569,7 @@ static void* tun_loop_thread_func( void *data ) {
     gnb_core_t *gnb_core = primary_worker_ctx->gnb_core;
     gnb_pf_core_t *pf_core = primary_worker_ctx->pf_core;
     ssize_t rlen;
+    char gnb_hex256_str1[256+1];
     gnb_core->loop_flag = 1;
     while ( gnb_core->loop_flag ) {
         rlen = gnb_core->drv->read_tun(gnb_core, gnb_core->tun_payload->data + gnb_core->tun_payload_offset, gnb_core->conf->payload_block_size);
@@ -495,7 +577,9 @@ static void* tun_loop_thread_func( void *data ) {
             continue;
         }
         if ( 1 == gnb_core->conf->if_dump ) {
-            GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload TUN out buffer[%s..]\n", GNB_HEX2_BYTE128((void *)(gnb_core->tun_payload->data + gnb_core->tun_payload_offset)));
+            GNB_LOG3(gnb_core->log, GNB_LOG_ID_CORE, "Payload TUN out buffer[%s..]\n",
+                     gnb_get_hex_string128((void *)(gnb_core->tun_payload->data + gnb_core->tun_payload_offset),gnb_hex256_str1)
+            );
         }
         gnb_payload16_set_size(gnb_core->tun_payload, GNB_PAYLOAD16_HEAD_SIZE + gnb_core->tun_payload_offset + rlen);
         gnb_pf_tun(gnb_core, pf_core, gnb_core->tun_payload);

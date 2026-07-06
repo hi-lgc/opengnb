@@ -28,23 +28,23 @@ typedef struct _gnb_fixed_pool_t{
 }gnb_fixed_pool_t;
 
 gnb_fixed_pool_t* gnb_fixed_pool_create(gnb_heap_t *heap, uint32_t array_len, uint32_t bsize) {
-	uint32_t mem_size;
+    uint32_t mem_size;
     gnb_fixed_pool_t *fixed_pool;
-	mem_size = array_len*bsize;	
-	if ( array_len > mem_size || bsize > mem_size ) {
-		return NULL;	
-	}
+    mem_size = array_len*bsize;    
+    if ( array_len > mem_size || bsize > mem_size ) {
+        return NULL;    
+    }
     fixed_pool = (gnb_fixed_pool_t *)gnb_heap_alloc(heap, sizeof(gnb_fixed_pool_t) + sizeof(void *) * array_len);
-	if ( NULL==fixed_pool ) {
-		return NULL;
-	}
+    if ( NULL==fixed_pool ) {
+        return NULL;
+    }
     fixed_pool->num = array_len;
     fixed_pool->bsize = bsize;
     fixed_pool->block = gnb_heap_alloc(heap, bsize * array_len);
-	if ( NULL==fixed_pool->block ) {
-		gnb_heap_free(heap, fixed_pool);
-		return NULL;
-	}
+    if ( NULL==fixed_pool->block ) {
+        gnb_heap_free(heap, fixed_pool);
+        return NULL;
+    }
     memset(fixed_pool->block, 0, bsize * array_len);
     fixed_pool->array_len = array_len;
     int i;

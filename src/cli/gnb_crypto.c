@@ -58,7 +58,7 @@ static void create_keypair(gnb_uuid_t uuid64, const char *private_key_file, cons
         perror("create public key file");
         exit(0);
     }
-	wlen = write(public_file_fd,hex_string,64);
+    wlen = write(public_file_fd,hex_string,64);
     if ( -1 == wlen ) {
         perror("write public key file");
     }

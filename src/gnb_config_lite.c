@@ -203,7 +203,7 @@ static void setup_node_route(gnb_core_t *gnb_core, char *node_route_string) {
         char *p = (char *)&tun_addr4;
         //根据ip地址最后一位判断是主机还是网络，如果是主机就作为 tun 的ip
         if ( 0 != p[3] && 0 == node->tun_addr4.s_addr ) {
-			//tun_addr4 当前版本只能被设一次，今后可能会支持多个虚拟ip
+            //tun_addr4 当前版本只能被设一次，今后可能会支持多个虚拟ip
             node->tun_addr4.s_addr = tun_addr4;
             node->tun_netmask_addr4.s_addr = tun_netmask_addr4;
             node->tun_subnet_addr4.s_addr = tun_subnet_addr4;
@@ -211,16 +211,16 @@ static void setup_node_route(gnb_core_t *gnb_core, char *node_route_string) {
             inet_pton(AF_INET6, tun_ipv6_string, (struct in6_addr *)&node->tun_ipv6_addr);
             GNB_HASH32_UINT32_SET(gnb_core->ipv4_node_map, node->tun_addr4.s_addr, node);
         } else {
-			netmask_class = get_netmask_class(tun_netmask_addr4);
-			if ( 'c' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subnetc_node_ring_map, tun_subnet_addr4, node);
-			}
-			if ( 'b' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subnetb_node_ring_map, tun_subnet_addr4, node);
-			}
-			if ( 'a' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subneta_node_ring_map, tun_subnet_addr4, node);
-			}
+            netmask_class = get_netmask_class(tun_netmask_addr4);
+            if ( 'c' == netmask_class ) {
+                gnb_add_routenode_ring(gnb_core, gnb_core->subnetc_node_ring_map, tun_subnet_addr4, node);
+            }
+            if ( 'b' == netmask_class ) {
+                gnb_add_routenode_ring(gnb_core, gnb_core->subnetb_node_ring_map, tun_subnet_addr4, node);
+            }
+            if ( 'a' == netmask_class ) {
+                gnb_add_routenode_ring(gnb_core, gnb_core->subneta_node_ring_map, tun_subnet_addr4, node);
+            }
         }
     } while(1);
 }

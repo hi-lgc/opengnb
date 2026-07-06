@@ -708,14 +708,14 @@ void local_node_file_config(gnb_conf_t *conf) {
                 exit(1);
             }
         }
-		if ( !strncmp(line_buffer, "pf-route-bits", sizeof("pf-route-bits")-1) ) {
-			num = sscanf(line_buffer, "%32[^ ] %16s", field, value);
-			if ( 2 != num ) {
-				printf("config %s error in [%s]\n", "pf-route-bits", node_conf_file);
-				exit(1);
-			}
-			conf->pf_route_bits = (uint32_t)strtoul(value, NULL, 0);
-		}
+        if ( !strncmp(line_buffer, "pf-route-bits", sizeof("pf-route-bits")-1) ) {
+            num = sscanf(line_buffer, "%32[^ ] %16s", field, value);
+            if ( 2 != num ) {
+                printf("config %s error in [%s]\n", "pf-route-bits", node_conf_file);
+                exit(1);
+            }
+            conf->pf_route_bits = (uint32_t)strtoul(value, NULL, 0);
+        }
         if ( !strncmp(line_buffer, "crypto", sizeof("crypto")-1) ) {
             num = sscanf(line_buffer, "%32[^ ] %16s", field, value);
             if ( 2 != num ) {
@@ -826,22 +826,22 @@ void local_node_file_config(gnb_conf_t *conf) {
     case GNB_MEMORY_SCALE_SMALL:
         conf->payload_block_size = 1024*16;
         conf->max_heap_fragment  = 1024*16;
-		conf->index_service_lru_size = 1024*4;
+        conf->index_service_lru_size = 1024*4;
         break;
     case GNB_MEMORY_SCALE_LARGE:
         conf->payload_block_size = 1024*32;
         conf->max_heap_fragment  = 1024*32;
-		conf->index_service_lru_size = 1024*32;
+        conf->index_service_lru_size = 1024*32;
         break;
     case GNB_MEMORY_SCALE_HUGE:
         conf->payload_block_size = 1024*64;
         conf->max_heap_fragment  = 1024*64;
-		conf->index_service_lru_size = 1024*64;
+        conf->index_service_lru_size = 1024*64;
         break;
     default:
         conf->payload_block_size = 1024*8;
         conf->max_heap_fragment  = 1024*8;
-		conf->index_service_lru_size = 1024*2;
+        conf->index_service_lru_size = 1024*2;
         break;
     }
 }
@@ -900,7 +900,7 @@ static void load_route_config(gnb_core_t *gnb_core) {
     char tun_ipv6_string[INET6_ADDRSTRLEN+1];
     int num;
     gnb_node_t *node;
-	gnb_node_ring_t *node_ring;
+    gnb_node_ring_t *node_ring;
     snprintf(route_file, PATH_MAX+NAME_MAX, "%s/%s", gnb_core->conf->conf_dir, "route.conf");
     file = fopen(route_file,"r");
     if ( NULL == file ) {
@@ -944,7 +944,7 @@ static void load_route_config(gnb_core_t *gnb_core) {
         char *p = (char *)&tun_addr4;
         //根据ip地址最后一位判断是主机还是网络，如果是主机就作为 tun 的ip
         if ( 0 != p[3] && 0 == node->tun_addr4.s_addr ) {
-			//tun_addr4 当前版本只能被设一次，今后可能会支持多个虚拟ip
+            //tun_addr4 当前版本只能被设一次，今后可能会支持多个虚拟ip
             node->tun_addr4.s_addr = tun_addr4;
             node->tun_netmask_addr4.s_addr = tun_netmask_addr4;
             node->tun_subnet_addr4.s_addr = tun_subnet_addr4;
@@ -954,13 +954,13 @@ static void load_route_config(gnb_core_t *gnb_core) {
         } else {
             netmask_class = get_netmask_class(tun_netmask_addr4);
             if ( 'c' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subnetc_node_ring_map, tun_subnet_addr4, node);
+                gnb_add_routenode_ring(gnb_core, gnb_core->subnetc_node_ring_map, tun_subnet_addr4, node);
             }
             if ( 'b' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subnetb_node_ring_map, tun_subnet_addr4, node);
+                gnb_add_routenode_ring(gnb_core, gnb_core->subnetb_node_ring_map, tun_subnet_addr4, node);
             }
             if ( 'a' == netmask_class ) {
-				gnb_add_routenode_ring(gnb_core, gnb_core->subneta_node_ring_map, tun_subnet_addr4, node);
+                gnb_add_routenode_ring(gnb_core, gnb_core->subneta_node_ring_map, tun_subnet_addr4, node);
             }
         }
     } while(1);

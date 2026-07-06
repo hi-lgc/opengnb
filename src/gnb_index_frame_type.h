@@ -79,7 +79,7 @@ typedef struct _echo_addr_frame_t {
 		unsigned char arg2;               //保留
 		unsigned char arg3;               //保留
 		unsigned char dst_key512[64];     //发送post addr节点的key
-		gnb_uuid_t dst_uuid64;              //发送post addr节点的uuid64
+		gnb_uuid_t dst_uuid64;            //发送post addr节点的uuid64
 		uint64_t src_ts_usec;             //发送方的时间戳,可选
 		char     addr_type;               //ipv6='6' or ipv4='4'
 		uint8_t  addr[16];

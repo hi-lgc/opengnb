@@ -56,6 +56,7 @@ static void detect_node_address(gnb_worker_t *gnb_detect_worker, gnb_node_t *nod
     detect_worker_ctx_t *detect_worker_ctx = gnb_detect_worker->ctx;
     gnb_core_t *gnb_core = detect_worker_ctx->gnb_core;
     gnb_address_t address_st;
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
     if ( 0 == node->detect_port4 ) {
         return;
     }
@@ -88,7 +89,12 @@ static void detect_node_address(gnb_worker_t *gnb_detect_worker, gnb_node_t *nod
     gnb_send_to_address_through_all_sockets(gnb_core, &address_st, detect_worker_ctx->index_frame_payload, interval_usec);
     detect_worker_ctx->is_send_detect = 1;
     node->last_send_detect_usec = detect_worker_ctx->now_time_usec;
-    GNB_LOG4(gnb_core->log, GNB_LOG_ID_DETECT_WORKER, "Try node address [%llu]->[%llu]%s status=%d\n", gnb_core->local_node->uuid64, node->uuid64, GNB_IP_PORT_STR1(&address_st), node->udp_addr_status);
+    GNB_LOG4(gnb_core->log, GNB_LOG_ID_DETECT_WORKER, "Try node address [%llu]->[%llu]%s status=%d\n",
+             gnb_core->local_node->uuid64,
+             node->uuid64,
+             gnb_address_port_str(&address_st,address_string1,gnb_core->conf->addr_secure),
+             node->udp_addr_status
+    );
 }
 
 static void detect_node_set_address(gnb_worker_t *gnb_detect_worker, gnb_node_t *node) {
@@ -210,7 +216,7 @@ static void init(gnb_worker_t *gnb_worker, void *ctx){
     gnb_core_t *gnb_core = (gnb_core_t *)ctx;
     detect_worker_ctx_t *detect_worker_ctx =  (detect_worker_ctx_t *)gnb_heap_alloc(gnb_core->heap, sizeof(detect_worker_ctx_t));
     memset(detect_worker_ctx, 0, sizeof(detect_worker_ctx_t));
-	detect_worker_ctx->index_frame_payload = (gnb_payload16_t *)gnb_heap_alloc(gnb_core->heap, gnb_core->conf->payload_block_size);
+    detect_worker_ctx->index_frame_payload = (gnb_payload16_t *)gnb_heap_alloc(gnb_core->heap, gnb_core->conf->payload_block_size);
     detect_worker_ctx->index_frame_payload->type = GNB_PAYLOAD_TYPE_INDEX;
     detect_worker_ctx->gnb_core = (gnb_core_t *)ctx;
     gnb_worker->ctx = detect_worker_ctx;

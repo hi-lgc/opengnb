@@ -38,6 +38,8 @@
 #include "es/gnb_es_type.h"
 #include "gnb_version.h"
 
+uint8_t addr_secure = 0;
+
 gnb_es_ctx* gnb_es_ctx_create(int is_service, char *ctl_block_file,gnb_log_ctx_t *log);
 void gnb_es_ctx_init(gnb_es_ctx *es_ctx);
 
@@ -65,8 +67,8 @@ void gnb_start_environment_service(gnb_es_ctx *es_ctx);
 
 static void show_useage(int argc,char *argv[]) {
     printf("GNB Environment Service\n");
-	printf("%s\n", GNB_VERSION_STRING);
-	printf("%s\n", GNB_BUILD_STRING);
+    printf("%s\n", GNB_VERSION_STRING);
+    printf("%s\n", GNB_BUILD_STRING);
     printf("Copyright (C) 2019 gnbdev<gnbdev@qq.com>\n");
     printf("Usage: %s -b CTL_BLOCK [OPTION]\n", argv[0]);
     printf("Command Summary:\n");
@@ -74,9 +76,16 @@ static void show_useage(int argc,char *argv[]) {
     printf("  -s, --service             service mode\n");
     printf("  -d, --daemon              daemon\n");
     printf("  -L, --discover-in-lan     discover in lan\n");
+
+#if defined(WITH_MINIUPNPC)
     printf("      --upnp                upnp\n");
     printf("      --upnp-multicase-if   upnp multicase interface\n");
     printf("      --upnp-gateway4       upnp gateway ipv4 address\n");
+#else
+    printf("      --upnp                unsupported\n");
+    printf("      --upnp-multicase-if   unsupported\n");
+    printf("      --upnp-gateway4       unsupported\n");
+#endif
 
     printf("      --resolv              resolv\n");
     printf("      --dump-address        dump address\n");
@@ -175,8 +184,7 @@ int main (int argc,char *argv[]) {
 
       { "upnp",                   no_argument,  0, OPT_UPNP },
       { "upnp-multicase-if",      required_argument,  0, OPT_UPNP_MULTICAST_IF },
-      { "upnp-gateway4",           required_argument,  0, OPT_UPNP_GATEWAY4 },
-
+      { "upnp-gateway4",          required_argument,  0, OPT_UPNP_GATEWAY4 },
 
       { "resolv",                 no_argument,  0, OPT_RESOLV },
       { "notify-address",         no_argument,  0, OPT_NOTIFY_ADDRESS },

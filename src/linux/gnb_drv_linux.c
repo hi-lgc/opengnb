@@ -105,37 +105,37 @@ static void setifmtu(char *if_name,int mtu) {
 }
 
 static int set_addr4(char *interface_name, char *ip, char *netmask) {
-	int socket_fd;
-	if ( (socket_fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0 ) {
-		return -1;
-	}
-	struct ifreq ifr;
-	struct sockaddr_in addr;
-	struct sockaddr_in netmask_addr;
-	memset(&addr, 0, sizeof(struct sockaddr_in));
-	memset(&netmask_addr, 0, sizeof(struct sockaddr_in));
-	memset(&ifr, 0, sizeof(struct ifreq));
-	strncpy(ifr.ifr_name, interface_name, IFNAMSIZ);
-	if ( 1 != inet_pton(AF_INET, ip, &addr.sin_addr) ) {
-		return  -1;
-	}
-	addr.sin_family = PF_INET;
-	ifr.ifr_addr    = *(struct sockaddr *)&addr;
-	if ( ioctl(socket_fd, SIOCSIFADDR, &ifr) < 0 ) {
-		perror("ioctl addr4 SIOCSIFADDR");
-		exit(1);
-	}
-	if ( 1 != inet_pton(AF_INET, netmask, &netmask_addr.sin_addr) ) {
-		return  -1;
-	}
-	netmask_addr.sin_family = PF_INET;
-	ifr.ifr_netmask = *(struct sockaddr *)&netmask_addr;
-	if ( ioctl(socket_fd, SIOCSIFNETMASK, &ifr ) < 0 ) {
-		perror("ioctl addr4 SIOCSIFNETMASK");
-		exit(1);
-	}
-	close(socket_fd);
-	return 0;
+    int socket_fd;
+    if ( (socket_fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0 ) {
+        return -1;
+    }
+    struct ifreq ifr;
+    struct sockaddr_in addr;
+    struct sockaddr_in netmask_addr;
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    memset(&netmask_addr, 0, sizeof(struct sockaddr_in));
+    memset(&ifr, 0, sizeof(struct ifreq));
+    strncpy(ifr.ifr_name, interface_name, IFNAMSIZ);
+    if ( 1 != inet_pton(AF_INET, ip, &addr.sin_addr) ) {
+        return  -1;
+    }
+    addr.sin_family = AF_INET;
+    memcpy(&ifr.ifr_addr, &addr, sizeof(struct sockaddr_in));
+    if ( ioctl(socket_fd, SIOCSIFADDR, &ifr) < 0 ) {
+        perror("ioctl addr4 SIOCSIFADDR");
+        exit(1);
+    }
+    if ( 1 != inet_pton(AF_INET, netmask, &netmask_addr.sin_addr) ) {
+        return  -1;
+    }
+    netmask_addr.sin_family = AF_INET;
+    memcpy(&ifr.ifr_netmask, &netmask_addr, sizeof(struct sockaddr_in));
+    if ( ioctl(socket_fd, SIOCSIFNETMASK, &ifr ) < 0 ) {
+        perror("ioctl addr4 SIOCSIFNETMASK");
+        exit(1);
+    }
+    close(socket_fd);
+    return 0;
 }
 
 static int set_addr6(char *interface_name, char *ip, char *netmask) {
@@ -204,13 +204,14 @@ static int tun_alloc(char *dev) {
   return fd;
 }
 
-
 int init_tun_linux(gnb_core_t *gnb_core) {
     gnb_core->tun_fd = -1;
     return 0;
 }
 
 static int open_tun_linux(gnb_core_t *gnb_core) {
+    char address_string1[GNB_IP6_PORT_STRING_SIZE];
+    char address_string2[GNB_IP6_PORT_STRING_SIZE];
     if ( -1 != gnb_core->tun_fd ) {
         return -1;
     }
@@ -219,9 +220,17 @@ static int open_tun_linux(gnb_core_t *gnb_core) {
         perror("Cannot open /dev/net/tun");
         return -1;
     }
-    set_addr4(gnb_core->ifname, GNB_ADDR4STR_PLAINTEXT1(&gnb_core->local_node->tun_addr4), GNB_ADDR4STR_PLAINTEXT2(&gnb_core->local_node->tun_netmask_addr4));
-    if ( GNB_ADDR_TYPE_IPV4 != gnb_core->conf->udp_socket_type ) {
-        set_addr6(gnb_core->ifname, GNB_ADDR6STR_PLAINTEXT1(&gnb_core->local_node->tun_ipv6_addr), "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000");
+    if ( gnb_core->conf->udp_socket_type & GNB_ADDR_TYPE_IPV4 ) {
+        set_addr4(gnb_core->ifname,
+                  gnb_in4_addr_str(&gnb_core->local_node->tun_addr4, address_string1, 0),
+                  gnb_in4_addr_str(&gnb_core->local_node->tun_netmask_addr4, address_string2, 0)
+        );
+    }
+    if ( gnb_core->conf->udp_socket_type & GNB_ADDR_TYPE_IPV6 ) {
+        set_addr6(gnb_core->ifname,
+                  gnb_in6_addr_str(&gnb_core->local_node->tun_ipv6_addr, address_string1, 0),
+                  "FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:0000:0000"
+        );
     }
     interface_up(gnb_core->ifname);
     setifmtu(gnb_core->ifname, gnb_core->conf->mtu);
@@ -249,7 +258,6 @@ static int close_tun_linux(gnb_core_t *gnb_core) {
 }
 
 static int release_tun_linux(gnb_core_t *gnb_core) {
-    free(gnb_core->platform_ctx);
     return 0;
 }
 

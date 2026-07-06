@@ -62,13 +62,13 @@ static void send_broadcast4(gnb_es_ctx *es_ctx, struct sockaddr_in *src_address_
     int ret;
     int on;
 
-	#if 0
+    #if 0
     local_node = (gnb_node_t *)GNB_HASH32_UINT64_GET_PTR(es_ctx->uuid_node_map, es_ctx->ctl_block->core_zone->local_uuid);
     if ( NULL == local_node ) {
         GNB_LOG1(es_ctx->log, GNB_LOG_ID_ES_DISCOVER_IN_LAN, "send broadcast4 error local node=%llu\n", es_ctx->ctl_block->core_zone->local_uuid);
         return;
     }
-	#endif
+    #endif
 
     local_node = es_ctx->local_node;
     payload = (gnb_payload16_t *)payload_buffer;
@@ -93,13 +93,13 @@ static void send_broadcast4(gnb_es_ctx *es_ctx, struct sockaddr_in *src_address_
         broadcast_address_st.sin_port = htons(DISCOVER_LAN_IN_BROADCAST_PORT);
         broadcast_address_st.sin_addr.s_addr = INADDR_BROADCAST;
     }
-
-    snprintf(discover_lan_in_frame->data.text, 256, "GNB LAN DISCOVER node=%llu address=%s,port=%d,broadcast_address=%s",
-                                                    local_node->uuid64,
-                                                    gnb_get_address4string(&src_address_in->sin_addr.s_addr,        gnb_static_ip_port_string_buffer1, 0),
-                                                    es_ctx->ctl_block->conf_zone->conf_st.udp4_ports[0],
-                                                    gnb_get_address4string(&broadcast_address_st.sin_addr.s_addr,   gnb_static_ip_port_string_buffer2, 0) );
-
+    snprintf(discover_lan_in_frame->data.text, 256,
+             "GNB LAN DISCOVER node=%llu address=%s,port=%d,broadcast_address=%s",
+             local_node->uuid64,
+             gnb_in4_addr_str(&src_address_in->sin_addr.s_addr,        gnb_address_static_str1, 0),
+             es_ctx->ctl_block->conf_zone->conf_st.udp4_ports[0],
+             gnb_in4_addr_str(&broadcast_address_st.sin_addr.s_addr,   gnb_address_static_str2, 0)
+    );
     broadcast_socket = socket(AF_INET, SOCK_DGRAM, 0);
 
     on = 1;
@@ -295,11 +295,10 @@ void gnb_discover_in_lan_ipv4(gnb_es_ctx *es_ctx) {
         }
         in = (struct sockaddr_in *)ifa->ifa_addr;
         broadcast_in = (struct sockaddr_in *)ifa->ifa_broadaddr;
-
         GNB_LOG1(es_ctx->log, GNB_LOG_ID_ES_DISCOVER_IN_LAN, "ifa->ifa_name[%s] [%s] broadcast[%s]\n", ifa->ifa_name,
-                gnb_get_address4string(&in->sin_addr.s_addr,           gnb_static_ip_port_string_buffer1, 0),
-                gnb_get_address4string(&broadcast_in->sin_addr.s_addr, gnb_static_ip_port_string_buffer2, 0) );
-
+                gnb_in4_addr_str(&in->sin_addr.s_addr,           gnb_address_static_str1, 0),
+                gnb_in4_addr_str(&broadcast_in->sin_addr.s_addr, gnb_address_static_str2, 0)
+        );
         send_broadcast4(es_ctx, in, broadcast_in);
     }
     freeifaddrs(ifaddr);

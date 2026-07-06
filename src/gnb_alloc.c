@@ -49,22 +49,22 @@ gnb_heap_t* gnb_heap_create(uint32_t max_fragment) {
 
 void* gnb_heap_alloc(gnb_heap_t *gnb_heap, uint32_t size) {
     if ( 0 == size ) {
-		printf("gnb_heap_alloc fail size is %u\n", size);
+        printf("gnb_heap_alloc fail size is %u\n", size);
         return NULL;
     }
     if ( gnb_heap->max_fragment == gnb_heap->fragment_nums ) {
         printf("gnb_heap_alloc fail heap is full\n");
         return NULL;
     }
-	/*
+    /*
     if ( size > (uint32_t)(1024l * 1024l * 1024l * 4) - 1 ) {
-		printf("gnb_heap_alloc fail  alloc memory > %u \n", (uint32_t)(1024l * 1024l * 1024l * 4) - 1);
+        printf("gnb_heap_alloc fail  alloc memory > %u \n", (uint32_t)(1024l * 1024l * 1024l * 4) - 1);
         return NULL;
     }
-	*/
+    */
     gnb_heap_fragment_t *fragment = malloc( sizeof(gnb_heap_fragment_t) + sizeof(unsigned char) * size );
     if ( NULL == fragment ) {
-		printf("gnb_heap_alloc error  malloc false\n");
+        printf("gnb_heap_alloc error  malloc false\n");
         return NULL;
     }
     fragment->idx = gnb_heap->fragment_nums;
