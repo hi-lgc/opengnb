@@ -159,12 +159,17 @@ int gnb_hash32_store(gnb_hash32_map_t *hash32_map, u_char *key, uint32_t key_len
             continue;
         }
         if ( !memcmp(kv_chain->key->data, key, key_len) ) {
-            gnb_kv32_release(hash32_map, kv_chain);
-            if ( bucket->kv_chain != kv_chain ) {
-                pre_kv_chain->nex = gnb_kv32_create(hash32_map, key, key_len, value, value_len);
-            } else {
-                bucket->kv_chain = gnb_kv32_create(hash32_map, key, key_len, value, value_len);
+            kv = gnb_kv32_create(hash32_map, key, key_len, value, value_len);
+            if ( NULL == kv ) {
+                return -1;
             }
+            kv->nex = kv_chain->nex;
+            if ( bucket->kv_chain != kv_chain ) {
+                pre_kv_chain->nex = kv;
+            } else {
+                bucket->kv_chain = kv;
+            }
+            gnb_kv32_release(hash32_map, kv_chain);
             break;
         }
         pre_kv_chain = kv_chain;
