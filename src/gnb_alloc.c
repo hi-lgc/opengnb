@@ -67,6 +67,7 @@ void* gnb_heap_alloc(gnb_heap_t *gnb_heap, uint32_t size) {
         printf("gnb_heap_alloc error  malloc false\n");
         return NULL;
     }
+    fragment->size = size;
     fragment->idx = gnb_heap->fragment_nums;
     gnb_heap->fragment_list[ gnb_heap->fragment_nums ] = fragment;
     gnb_heap->fragment_nums++;
@@ -95,22 +96,18 @@ void gnb_heap_free(gnb_heap_t *gnb_heap, void *p){
         //发生错误了
         return;
     }
-    if ( 1 == gnb_heap->fragment_nums ) {
-        if ( fragment->idx != last_fragment->idx ) {
-            //发生错误了
-            return;
-        }
-        goto finish;
+    if ( 1 == gnb_heap->fragment_nums && fragment->idx != last_fragment->idx ) {
+        //发生错误了
+        return;
     }
-    if ( last_fragment->idx == fragment->idx ) {
-        goto finish;
-    }
+
     gnb_heap->alloc_byte -= fragment->size;
     gnb_heap->ralloc_byte -= (sizeof(gnb_heap_fragment_t)+fragment->size);
-    last_fragment->idx = fragment->idx;
-    gnb_heap->fragment_list[last_fragment->idx] = last_fragment;
 
-finish:
+    if ( last_fragment->idx != fragment->idx ) {
+        last_fragment->idx = fragment->idx;
+        gnb_heap->fragment_list[last_fragment->idx] = last_fragment;
+    }
 
     gnb_heap->fragment_nums--;
     free(fragment);
