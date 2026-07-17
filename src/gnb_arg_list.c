@@ -52,7 +52,7 @@ int gnb_arg_list_to_string(gnb_arg_list_t *arg_list, char *string, size_t string
     size_t copied_len = 0;
     for ( i=0; i < arg_list->argc; i++ ) {
         argv_len = strlen( arg_list->argv[i] );
-        if ( (copied_len + argv_len) > string_len ) {
+        if ( (copied_len + argv_len + 1) > string_len ) {
             break;
         }
         strncpy(p, arg_list->argv[i], string_len-copied_len);
